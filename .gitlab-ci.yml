@@ -1,0 +1,43 @@
+.tests: &tests
+  tags:
+    - docker
+  before_script:
+    - pip install -r requirements.txt
+    - pip install tox
+
+pycodestyle:
+  <<: *tests
+  image: python
+  script:
+    - pip install pycodestyle
+    - pycodestyle atlassian2gitlab/ tests/
+
+python27:
+  <<: *tests
+  image: python:2.7
+  script: tox -e py27
+
+python34:
+  <<: *tests
+  image: python:3.4
+  script: tox -e py34
+
+python35:
+  <<: *tests
+  image: python:3.5
+  script: tox -e py35
+
+python36:
+  <<: *tests
+  image: python:3.6
+  script: tox -e py36
+
+pypy:
+  <<: *tests
+  image: pypy:2
+  script: tox -e pypy
+
+pypy3:
+  <<: *tests
+  image: pypy:3
+  script: tox -e pypy3

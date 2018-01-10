@@ -1,2 +1,7 @@
+.cache
+.coverage
+.ropeproject
+.tox
+*.egg-info
 *.pyc
 __pycache__
