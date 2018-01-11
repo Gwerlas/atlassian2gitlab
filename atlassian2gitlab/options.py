@@ -48,6 +48,11 @@ class Options(object):
             help='Jira Project Key',
             required=True)
 
+        self.parser.add_argument(
+            '--ssl-no-verify',
+            dest='SSL_NO_VERIFY',
+            help='Do not verify SSL certificate (not recommanded)')
+
     @property
     def values(self):
         return self.parser.parse_args()
