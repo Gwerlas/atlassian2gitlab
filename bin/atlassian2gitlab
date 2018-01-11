@@ -1,5 +1,17 @@
 #!/usr/bin/env python
-import atlassian2gitlab
+import atlassian2gitlab as a2g
 
 if __name__ == "__main__":
-    atlassian2gitlab.migrate()
+    args = a2g.options.Options().values
+    a2g.gitlab_repo = args.GL_REPO
+    a2g.gitlab_token = args.GL_TOKEN
+    a2g.gitlab_url = args.GL_URL
+    a2g.atlassian_user = args.AT_USER
+    a2g.atlassian_pass = args.AT_PASS
+    a2g.jira_project_key = args.JIRA_PROJECT_KEY
+    a2g.jira_url = args.JIRA_URL
+
+    if args.SSL_NO_VERIFY:
+        a2g.ssl_verify = False
+
+    a2g.issues()

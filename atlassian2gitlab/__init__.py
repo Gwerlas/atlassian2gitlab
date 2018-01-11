@@ -1,21 +1,27 @@
-from atlassian2gitlab.options import Options
 from atlassian2gitlab.jira import Jira
 from atlassian2gitlab.gitlab import Gitlab
 
 
-def migrate():
-    args = Options().values
-    jira = Jira(
-        args.AT_USER,
-        args.AT_PASS,
-        args.JIRA_URL,
-        args.JIRA_PROJECT_KEY)
-    gitlab = Gitlab(
-        args.GL_URL,
-        args.GL_REPO,
-        args.GL_TOKEN)
+gitlab_api_version = 4
+gitlab_repo = None
+gitlab_token = None
+gitlab_url = None
+jira_project_key = None
+jira_url = None
+atlassian_user = None
+atlassian_pass = None
+ssl_verify = True
 
-    for issue in jira.getActiveIssues():
-        print(gitlab.addIssue({
-            'title': issue['fields']['summary']
+
+def issues():
+    gitlab = Gitlab(gitlab_url, private_token=gitlab_token,
+                    api_version=4, ssl_verify=ssl_verify)
+    jira = Jira(jira_url, basic_auth=(atlassian_user, atlassian_pass),
+                options={'verify': ssl_verify})
+
+    project = gitlab.search_project_from_repo(gitlab_repo)
+
+    for issue in jira.active_issues(jira_project_key):
+        print(project.issues.create({
+            'title': issue.fields.summary
         }))
