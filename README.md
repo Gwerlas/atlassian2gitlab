@@ -1,7 +1,12 @@
-# Migrate from Atlassian to Gitlab
+# Migrate from the Atlassian suite to Gitlab
 
 [![pipeline status](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/pipeline.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
 [![coverage report](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/coverage.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
+
+## Introduction
+
+This project is very young, the _future_ first version will only support issue
+migration from Jira to Gitlab.
 
 ## Installation
 
