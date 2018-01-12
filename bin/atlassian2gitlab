@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 import atlassian2gitlab as a2g
+from atlassian2gitlab.cli import CLI
+
 
 if __name__ == "__main__":
-    args = a2g.options.Options().values
+    args = CLI().config
     a2g.gitlab_repo = args.GL_REPO
     a2g.gitlab_token = args.GL_TOKEN
     a2g.gitlab_url = args.GL_URL
@@ -10,6 +12,9 @@ if __name__ == "__main__":
     a2g.atlassian_pass = args.AT_PASS
     a2g.jira_project_key = args.JIRA_PROJECT_KEY
     a2g.jira_url = args.JIRA_URL
+
+    if args.DEBUG:
+        a2g.debug = True
 
     if args.SSL_NO_VERIFY:
         a2g.ssl_verify = False

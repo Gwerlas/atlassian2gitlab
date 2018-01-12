@@ -25,17 +25,17 @@ If someone want to solve it, he is welcome !
 ## Usage
 
 ```
-$ atlassian2gitlab [-h] [--gitlab-url [GL_URL]] --gitlab-token GL_TOKEN
+$ atlassian2gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
                         --gitlab-repo GL_REPO --atlassian-username AT_USER
-                        --atlassian-password AT_PASS [--jira-url [JIRA_URL]]
-                        --jira-project-key JIRA_PROJECT_KEY
+                        --atlassian-password AT_PASS [--jira-url JIRA_URL]
+                        --jira-project-key JIRA_PROJECT_KEY [--ssl-no-verify]
+                        [--debug]
 
 Migrate from the Atlassian suite to Gitlab.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --gitlab-url [GL_URL]
-                        Gitlab URL (default: https://gitlab.com/)
+  --gitlab-url GL_URL   Gitlab URL (default: https://gitlab.com/)
   --gitlab-token GL_TOKEN
                         Access Token for Gitlab (default: None)
   --gitlab-repo GL_REPO
@@ -44,8 +44,10 @@ optional arguments:
                         Atlassian user name (default: None)
   --atlassian-password AT_PASS
                         Atlassian password (default: None)
-  --jira-url [JIRA_URL]
-                        Jira URL (default: https://jira.atlassian.com)
+  --jira-url JIRA_URL   Jira URL (default: https://jira.atlassian.com)
   --jira-project-key JIRA_PROJECT_KEY
                         Jira Project Key (default: None)
+  --ssl-no-verify       Do not verify SSL certificate (not recommanded)
+                        (default: False)
+  --debug               Display debug messages (default: False)
 ```
