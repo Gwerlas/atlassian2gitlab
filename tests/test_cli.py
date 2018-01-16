@@ -58,7 +58,7 @@ def test_jira_project_key():
 
 def test_warn_is_yellow(capsys):
     import logging
-    CLI()
+    cli = CLI()
     logging.warn('message')
     out, err = capsys.readouterr()
     assert err == '\x1b[33mWARNING message\x1b[0m\n'
