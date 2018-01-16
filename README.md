@@ -8,6 +8,8 @@
 This project is very young, the _future_ first version will only support issue
 migration from Jira to Gitlab.
 
+Based on [`python-gitlab`](https://pypi.python.org/pypi/python-gitlab) and [`jira`](https://pypi.python.org/pypi/jira) Python modules.
+
 ## Installation
 
 Supported version of python :
