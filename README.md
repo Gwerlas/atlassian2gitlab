@@ -28,12 +28,12 @@ If someone want to solve it, he is welcome !
 
 ```
 $ atlassian2gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
-                        --gitlab-repo GL_REPO --atlassian-username AT_USER
+                        --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
+                        [--version] --atlassian-username AT_USER
                         --atlassian-password AT_PASS [--jira-url JIRA_URL]
-                        --jira-project-key JIRA_PROJECT_KEY [--ssl-no-verify]
-                        [--debug]
+                        --jira-project-key JIRA_PROJECT_KEY
 
-Migrate from the Atlassian suite to Gitlab.
+Migrate from the Atlassian suite to Gitlab
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -42,6 +42,10 @@ optional arguments:
                         Access Token for Gitlab (default: None)
   --gitlab-repo GL_REPO
                         Gitlab project name (default: None)
+  --ssl-no-verify       Do not verify SSL certificate (not recommanded)
+                        (default: False)
+  --debug               Display debug messages (default: False)
+  --version             Show version and exit
   --atlassian-username AT_USER
                         Atlassian user name (default: None)
   --atlassian-password AT_PASS
@@ -49,16 +53,14 @@ optional arguments:
   --jira-url JIRA_URL   Jira URL (default: https://jira.atlassian.com)
   --jira-project-key JIRA_PROJECT_KEY
                         Jira Project Key (default: None)
-  --ssl-no-verify       Do not verify SSL certificate (not recommanded)
-                        (default: False)
-  --debug               Display debug messages (default: False)
 ```
 
 If You need to empty your GitLab project before :
 
 ```
-flush-gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
+$ flush-gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
                     --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
+                    [--version]
 
 Flush your Gitlab
 
@@ -72,4 +74,5 @@ optional arguments:
   --ssl-no-verify       Do not verify SSL certificate (not recommanded)
                         (default: False)
   --debug               Display debug messages (default: False)
+  --version             Show version and exit
 ```

@@ -63,6 +63,11 @@ class CLI(object):
             help='Display debug messages',
             action='store_true',
             default=False)
+        parser.add_argument(
+            '--version',
+            help='Show version and exit',
+            action='version',
+            version='Atlassian2Gitlab 0.1')
 
         return parser
 
