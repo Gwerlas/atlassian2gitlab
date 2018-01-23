@@ -31,16 +31,21 @@ def issues():
     project = gitlab.search_project_from_repo(gitlab_repo)
     issues = jira.active_issues(jira_project_key)
 
-    logger.info('{} issues to migrate'.format(len(issues)))
     i = 0
-    for jira_issue in issues:
-        gl_issue = project.issues.create({
-            'title': jira_issue.fields.summary
-        })
-        logger.debug('Issue {} migrated: #{}'.format(jira_issue, gl_issue.id))
-        i += 1
+    for issue in issues:
+        try:
+            gitlab.create_from_jira(project, issue)
+            i += 1
+        except Exception as e:
+            logger.warning('Skip issue {}: {}'.format(issue, e))
 
-    logger.info('{} issues migrated'.format(i))
+    total = len(issues)
+    if i == total:
+        logger.info('All {} issues migrated'.format(total))
+    elif i == 0:
+        logger.error('Any issues migrated')
+    else:
+        logger.warn('{}/{} issues migrated'.format(i, len(issues)))
 
 
 def flush():
