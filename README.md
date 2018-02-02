@@ -1,30 +1,22 @@
-# Migrate from the Atlassian suite to Gitlab
+Migrate from the Atlassian suite to Gitlab
+==========================================
 
-[![pipeline status](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/pipeline.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
-[![coverage report](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/coverage.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
+[![pipeline status](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/pipeline.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)[![coverage report](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/coverage.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
 
-## Introduction
+Introduction
+------------
 
-This project is very young, the _future_ first version will only support issue
-migration from Jira to Gitlab.
+This project is very young, the *future* first version will only support issue migration from Jira to Gitlab.
 
 Based on [`python-gitlab`](https://pypi.python.org/pypi/python-gitlab) and [`jira`](https://pypi.python.org/pypi/jira) Python modules.
 
-## Installation
+Installation
+------------
 
-Supported version of python :
- * 3.4
- * 3.5
- * 3.6
- * Pypy3
+Supported version of python : * 2.7 * 3.4 * 3.5 * 3.6 * Pypy * Pypy3
 
-I do not support Python 2 cause of import troubles :  
-I use `jira` python module extended in `jira.py`. There is no troubles with
-Python 3, but Python 2 raise an `ImportError` and I have chosen to not support Python 2.
-
-If someone want to solve it, he is welcome !
-
-## Usage
+Usage
+-----
 
 ```
 $ atlassian2gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN

@@ -19,4 +19,5 @@ if __name__ == "__main__":
     if args.SSL_NO_VERIFY:
         a2g.ssl_verify = False
 
-    a2g.issues()
+    manager = a2g.JiraManager()
+    manager.cp()

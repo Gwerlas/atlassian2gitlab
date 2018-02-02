@@ -1,10 +1,12 @@
-from atlassian2gitlab.jira import Jira
-from atlassian2gitlab.gitlab import Gitlab
+from atlassian2gitlab.gl_objects import Project
+from atlassian2gitlab.exceptions import A2GException
+import jira
+from gitlab import Gitlab
 import logging
+import requests
 
 
 debug = False
-gitlab_api_version = 4
 gitlab_repo = None
 gitlab_token = None
 gitlab_url = None
@@ -15,58 +17,72 @@ atlassian_pass = None
 ssl_verify = True
 
 
-def issues():
-    logger = logging.getLogger(__name__)
-    if not ssl_verify:
-        logger.warn('You disabled SSL checks, it is not recommanded !')
-
-    gitlab = Gitlab(gitlab_url, private_token=gitlab_token,
-                    api_version=4, ssl_verify=ssl_verify)
-    jira = Jira(jira_url, basic_auth=(atlassian_user, atlassian_pass),
-                options={'verify': ssl_verify})
-
-    if debug:
-        gitlab.enable_debug()
-
-    project = gitlab.search_project_from_repo(gitlab_repo)
-    issues = jira.active_issues(jira_project_key)
-
-    i = 0
-    for issue in issues:
-        try:
-            gitlab.create_from_jira(project, issue)
-            i += 1
-        except Exception as e:
-            logger.warning('Skip issue {}: {}'.format(issue, e))
-
-    total = len(issues)
-    if i == total:
-        logger.info('All {} issues migrated'.format(total))
-    elif i == 0:
-        logger.error('Any issues migrated')
-    else:
-        logger.warn('{}/{} issues migrated'.format(i, len(issues)))
+logger = logging.getLogger(__name__)
+session = requests.Session()
 
 
-def flush():
-    logger = logging.getLogger(__name__)
-    if not ssl_verify:
-        logger.warn('You disabled SSL checks, it is not recommanded !')
+class Manager(object):
+    _gitlab = None
+    _project = None
 
-    gitlab = Gitlab(gitlab_url, private_token=gitlab_token,
-                    api_version=4, ssl_verify=ssl_verify)
+    @property
+    def gitlab(self):
+        if not self._gitlab:
+            self._gitlab = Gitlab(gitlab_url,
+                                  private_token=gitlab_token,
+                                  ssl_verify=ssl_verify,
+                                  api_version=4,
+                                  session=session)
+            if debug:
+                self._gitlab.enable_debug()
+        return self._gitlab
 
-    if debug:
-        gitlab.enable_debug()
+    @property
+    def project(self):
+        if not self._project:
+            self._project = Project(gitlab_repo, self.gitlab)
+        return self._project
 
-    project = gitlab.search_project_from_repo(gitlab_repo)
-    issues = project.issues.list(all=True)
 
-    logger.info('{} issues to delete'.format(len(issues)))
-    i = 0
-    for issue in issues:
-        issue.delete()
-        logger.debug('Issue {} deleted'.format(issue.id))
-        i += 1
+class JiraManager(Manager):
+    """
+    Manage issues
+    """
+    _jira = None
 
-    logger.info('{} issues deleted'.format(i))
+    @property
+    def jira(self):
+        if not self._jira:
+            self._jira = jira.JIRA(jira_url,
+                                   options={'verify': ssl_verify},
+                                   basic_auth=(atlassian_user, atlassian_pass))
+        return self._jira
+
+    def activeIssues(self):
+        jql = 'project={}'.format(jira_project_key)
+        jql += ' AND (resolution=Unresolved OR Sprint in openSprints())'
+        return self.jira.search_issues(jql)
+
+    def cp(self):
+        issues = self.activeIssues()
+        total = len(issues)
+        if total == 0:
+            logger.info('Nothing to do')
+            return self
+
+        i = 0
+        for issue in issues:
+            try:
+                self.project.addIssue(issue.fields)
+                i += 1
+            except A2GException as e:
+                logger.warning('Skip issue %s: %s', issue.key, e)
+
+        if i == total:
+            logger.info('All %d issues migrated', total)
+        elif i == 0:
+            logger.error('Any issues migrated')
+        else:
+            logger.warn('%d/%d issues migrated', i, len(issues))
+
+        return self
