@@ -27,7 +27,7 @@ def test_jira_manager(mocker):
     manager = a2g.JiraManager()
     mock = mocker.patch('jira.JIRA')
     manager.jira
-    mock.assert_called_once()
+    mock.call_count == 1
 
 
 def test_no_jira_issues_to_copy(caplog):
