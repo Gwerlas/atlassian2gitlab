@@ -26,7 +26,7 @@ Supported version of python :
 Usage
 -----
 
-```
+```bash
 $ atlassian2gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
                         --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
                         [--version] --atlassian-username AT_USER
@@ -57,7 +57,7 @@ optional arguments:
 
 If You need to empty your GitLab project before :
 
-```
+```bash
 $ flush-gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
                     --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
                     [--version]
@@ -76,3 +76,25 @@ optional arguments:
   --debug               Display debug messages (default: False)
   --version             Show version and exit
 ```
+
+## Contributing
+
+Install Python, PIP and Tox. Run Tox to check your environment.
+
+If You want to install dependencies and run tests manually :
+
+```bash
+pip install -r requirements.txt
+pip install munch pytest-cov pytest-mock
+pip install -e .
+pytest --cov=atlassian2gitlab
+
+# With coverage in HTML format
+pytest --cov=atlassian2gitlab --cov-report=html:../coverage
+```
+
+It is recommended to use PIP to install dependencies, your distribution may not have the appropriate/latest version of them.
+
+> If you are a Gentoo user :
+>
+> You should add the `--user` argument on `pip install` calls.
