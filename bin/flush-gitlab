@@ -5,15 +5,12 @@ from atlassian2gitlab.cli import CLI
 
 if __name__ == "__main__":
     args = CLI().flushConfig
-    a2g.gitlab_repo = args.GL_REPO
-    a2g.gitlab_token = args.GL_TOKEN
-    a2g.gitlab_url = args.GL_URL
 
-    if args.DEBUG:
-        a2g.debug = True
-
-    if args.SSL_NO_VERIFY:
-        a2g.ssl_verify = False
+    a2g.gitlab_repo = args.gitlab.repo
+    a2g.gitlab_token = args.gitlab.token
+    a2g.gitlab_url = args.gitlab.url
+    a2g.debug = args.debug
+    a2g.ssl_verify = args.gitlab.ssl_verify
 
     manager = a2g.Manager()
     manager.project.flush()

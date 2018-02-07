@@ -1,4 +1,28 @@
-import argparse
+class Config(object):
+    def __init__(self, config):
+        self.ssl_verify = config.getboolean('ssl_verify', fallback=True)
+
+
+class AtlassianConfig(Config):
+    def __init__(self, config):
+        Config.__init__(self, config)
+        self.username = config['username']
+        self.password = config['password']
+
+
+class JiraConfig(AtlassianConfig):
+    def __init__(self, config):
+        AtlassianConfig.__init__(self, config)
+        self.url = config.get('url', fallback='https://jira.atlassian.com')
+        self.key = config['key']
+
+
+class GitlabConfig(Config):
+    def __init__(self, config):
+        Config.__init__(self, config)
+        self.token = config['token']
+        self.url = config.get('url', fallback='https://gitlab.com/')
+        self.repo = config['repo']
 
 
 class CLI(object):
@@ -30,75 +54,48 @@ class CLI(object):
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
 
-    def _baseConfig(self, description):
-        parser = argparse.ArgumentParser(
-            description=description,
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
+    def _argparse(self, description):
+        import argparse
+        parser = argparse.ArgumentParser(description=description)
         parser.add_argument(
-            '--gitlab-url',
-            dest='GL_URL',
-            help='Gitlab URL',
-            default='https://gitlab.com/')
-        parser.add_argument(
-            '--gitlab-token',
-            dest='GL_TOKEN',
-            help='Access Token for Gitlab',
+            '-c', '--config',
+            help='Config file path',
             required=True)
         parser.add_argument(
-            '--gitlab-repo',
-            dest='GL_REPO',
-            help='Gitlab project name',
-            required=True)
-
-        parser.add_argument(
-            '--ssl-no-verify',
-            dest='SSL_NO_VERIFY',
-            help='Do not verify SSL certificate (not recommanded)',
-            action='store_true',
-            default=False)
-        parser.add_argument(
-            '--debug',
-            dest='DEBUG',
+            '-d', '--debug',
             help='Display debug messages',
             action='store_true',
             default=False)
         parser.add_argument(
-            '--version',
+            '-V', '--version',
             help='Show version and exit',
             action='version',
-            version='Atlassian2Gitlab 0.1')
-
+            version=self.version)
         return parser
+
+    def _configparse(self, file):
+        import configparser
+        config = configparser.ConfigParser()
+        config.read(file)
+        return config
 
     @property
     def flushConfig(self):
-        return self._baseConfig('Flush your Gitlab').parse_args()
+        args = self._argparse('Flush your Gitlab').parse_args()
+        config = self._configparse(args.config)
+        args.gitlab = GitlabConfig(config['gitlab'])
+        return args
 
     @property
     def migrationConfig(self):
-        parser = self._baseConfig('Migrate from the Atlassian suite to Gitlab')
+        description = 'Migrate from the Atlassian suite to Gitlab'
+        args = self._argparse(description).parse_args()
+        config = self._configparse(args.config)
+        args.gitlab = GitlabConfig(config['gitlab'])
+        args.jira = JiraConfig(config['jira'])
+        return args
 
-        parser.add_argument(
-            '--atlassian-username',
-            dest='AT_USER',
-            help='Atlassian user name',
-            required=True)
-        parser.add_argument(
-            '--atlassian-password',
-            dest='AT_PASS',
-            help='Atlassian password',
-            required=True)
-
-        parser.add_argument(
-            '--jira-url',
-            dest='JIRA_URL',
-            help='Jira URL',
-            default='https://jira.atlassian.com')
-        parser.add_argument(
-            '--jira-project-key',
-            dest='JIRA_PROJECT_KEY',
-            help='Jira Project Key',
-            required=True)
-
-        return parser.parse_args()
+    @property
+    def version(self):
+        import atlassian2gitlab
+        return 'Atlassian2Gitlab {}'.format(atlassian2gitlab.__version__)

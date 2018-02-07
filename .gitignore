@@ -6,3 +6,4 @@
 *.egg-info
 *.pyc
 __pycache__
+config.ini

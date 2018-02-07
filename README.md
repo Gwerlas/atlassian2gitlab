@@ -27,54 +27,54 @@ Usage
 -----
 
 ```bash
-$ atlassian2gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
-                        --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
-                        [--version] --atlassian-username AT_USER
-                        --atlassian-password AT_PASS [--jira-url JIRA_URL]
-                        --jira-project-key JIRA_PROJECT_KEY
+usage: atlassian2gitlab [-h] -c CONFIG [-d] [-V]
 
 Migrate from the Atlassian suite to Gitlab
 
 optional arguments:
   -h, --help            show this help message and exit
-  --gitlab-url GL_URL   Gitlab URL (default: https://gitlab.com/)
-  --gitlab-token GL_TOKEN
-                        Access Token for Gitlab (default: None)
-  --gitlab-repo GL_REPO
-                        Gitlab project name (default: None)
-  --ssl-no-verify       Do not verify SSL certificate (not recommanded)
-                        (default: False)
-  --debug               Display debug messages (default: False)
-  --version             Show version and exit
-  --atlassian-username AT_USER
-                        Atlassian user name (default: None)
-  --atlassian-password AT_PASS
-                        Atlassian password (default: None)
-  --jira-url JIRA_URL   Jira URL (default: https://jira.atlassian.com)
-  --jira-project-key JIRA_PROJECT_KEY
-                        Jira Project Key (default: None)
+  -c CONFIG, --config CONFIG
+                        Config file path
+  -d, --debug           Display debug messages
+  -V, --version         Show version and exit
 ```
 
 If You need to empty your GitLab project before :
 
 ```bash
-$ flush-gitlab [-h] [--gitlab-url GL_URL] --gitlab-token GL_TOKEN
-                    --gitlab-repo GL_REPO [--ssl-no-verify] [--debug]
-                    [--version]
+usage: flush-gitlab [-h] -c CONFIG [-d] [-V]
 
 Flush your Gitlab
 
 optional arguments:
   -h, --help            show this help message and exit
-  --gitlab-url GL_URL   Gitlab URL (default: https://gitlab.com/)
-  --gitlab-token GL_TOKEN
-                        Access Token for Gitlab (default: None)
-  --gitlab-repo GL_REPO
-                        Gitlab project name (default: None)
-  --ssl-no-verify       Do not verify SSL certificate (not recommanded)
-                        (default: False)
-  --debug               Display debug messages (default: False)
-  --version             Show version and exit
+  -c CONFIG, --config CONFIG
+                        Config file path
+  -d, --debug           Display debug messages
+  -V, --version         Show version and exit
+```
+
+I recommand to copy and edit the `config-sample.ini` from the project sources.
+
+Here is an example of config file :
+
+```ini
+[DEFAULT]
+; Disable SSL checks globally (not recommanded)
+;ssl_verify = False
+
+; Generic Atlassian credentials (not used by GitLab)
+username = john.doe@domain.tld
+password = very-secret
+
+[gitlab]
+url = http://your-gitlab-url.tld/
+token = get-this-token-from-your-profile
+repo = namespaced/project/name
+
+[jira]
+url = https://pycontribs.atlassian.net
+key = Z3E79A974A
 ```
 
 ## Contributing

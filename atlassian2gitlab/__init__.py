@@ -16,6 +16,8 @@ atlassian_user = None
 atlassian_pass = None
 ssl_verify = True
 
+__version__ = 0.1
+
 
 logger = logging.getLogger(__name__)
 session = requests.Session()
