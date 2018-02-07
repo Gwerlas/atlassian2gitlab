@@ -98,3 +98,5 @@ It is recommended to use PIP to install dependencies, your distribution may not 
 > If you are a Gentoo user :
 >
 > You should add the `--user` argument on `pip install` calls.
+
+To test your code, you can use https://pycontribs.atlassian.net.

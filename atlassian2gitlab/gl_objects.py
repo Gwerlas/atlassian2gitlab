@@ -42,6 +42,7 @@ class Project(Ressource):
             gitlab.v4.objects.Issue
         """
         data = {
+            'created_at': fields.created,
             'title': fields.summary
         }
 

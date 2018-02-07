@@ -54,6 +54,7 @@ def test_get_project():
 
 def test_add_jira_issue_without_assignee():
     fields = munchify({
+        'created': 'now',
         'summary': 'My title',
         'assignee': None
     })
@@ -70,12 +71,14 @@ def test_add_jira_issue_without_assignee():
     })
 
     assert project.addIssue(fields) == {
+        'created_at': 'now',
         'title': 'My title'
     }
 
 
 def test_add_jira_issue():
     fields = munchify({
+        'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'}
     })
@@ -95,6 +98,7 @@ def test_add_jira_issue():
     })
 
     assert project.addIssue(fields) == {
+        'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1]
     }
@@ -102,6 +106,7 @@ def test_add_jira_issue():
 
 def test_raise_exception_if_assignee_not_found():
     fields = munchify({
+        'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'}
     })
