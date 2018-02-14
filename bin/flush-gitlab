@@ -6,11 +6,11 @@ from atlassian2gitlab.cli import CLI
 if __name__ == "__main__":
     args = CLI().flushConfig
 
-    a2g.gitlab_repo = args.gitlab.repo
-    a2g.gitlab_token = args.gitlab.token
-    a2g.gitlab_url = args.gitlab.url
-    a2g.debug = args.debug
-    a2g.ssl_verify = args.gitlab.ssl_verify
-
-    manager = a2g.Manager()
+    manager = a2g.Manager(
+        gitlab_url=args.gitlab.url,
+        gitlab_token=args.gitlab.token,
+        gitlab_repo=args.gitlab.repo,
+        debug=args.debug,
+        ssl_verify=args.gitlab.ssl_verify
+    )
     manager.project.flush()

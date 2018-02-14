@@ -5,33 +5,32 @@ from munch import munchify
 
 
 def test_gitlab_manager():
-    manager = a2g.Manager()
+    manager = a2g.Manager(None, None, None)
     assert manager.gitlab.api_version == '4'
 
 
 def test_gitlab_in_debug_mode():
     a2g.debug = True
-    a2g.Manager().gitlab
+    a2g.Manager(None, None, None, debug=True).gitlab
     logger = logging.getLogger("requests.packages.urllib3")
     assert logging.getLogger().getEffectiveLevel() == logging.DEBUG
     assert logger.getEffectiveLevel() == logging.DEBUG
 
 
 def test_project_manager():
-    a2g.gitlab_repo = 'fake/project'
-    manager = a2g.Manager()
+    manager = a2g.Manager(None, None, 'fake/project')
     assert manager.project._name == 'fake/project'
 
 
 def test_jira_manager(mocker):
-    manager = a2g.JiraManager()
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
     mock = mocker.patch('jira.JIRA')
     manager.jira
     mock.call_count == 1
 
 
 def test_no_jira_issues_to_copy(caplog):
-    manager = a2g.JiraManager()
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
     manager._jira = munchify({
         'search_issues': lambda jql: []
     })
@@ -42,7 +41,7 @@ def test_no_jira_issues_to_copy(caplog):
 
 
 def test_copy_jira_issues_in_failure(caplog, mocker):
-    manager = a2g.JiraManager()
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = munchify({
         'search_issues': lambda jql: [issue]
@@ -60,7 +59,7 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
 
 
 def test_copy_jira_issues_partially_in_failure(caplog, mocker):
-    manager = a2g.JiraManager()
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue_one = munchify({'key': 'PRO-42', 'fields': {}})
     issue_two = munchify({'key': 'PRO-43', 'fields': {}})
     manager._jira = munchify({
@@ -79,7 +78,7 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
 
 
 def test_copy_jira_issues(caplog, mocker):
-    manager = a2g.JiraManager()
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = munchify({
         'search_issues': lambda jql: [issue]

@@ -6,16 +6,6 @@ import logging
 import requests
 
 
-debug = False
-gitlab_repo = None
-gitlab_token = None
-gitlab_url = None
-jira_project_key = None
-jira_url = None
-atlassian_user = None
-atlassian_pass = None
-ssl_verify = True
-
 __version__ = 0.1
 
 
@@ -27,26 +17,43 @@ class Manager(object):
     _gitlab = None
     _project = None
 
+    def __init__(self, gitlab_url, gitlab_token, gitlab_repo,
+                 debug=False, ssl_verify=True):
+        self.debug = debug
+        self.ssl_verify = ssl_verify
+        self.gitlab_repo = gitlab_repo
+        self.gitlab_token = gitlab_token
+        self.gitlab_url = gitlab_url
+
     @property
     def gitlab(self):
         if not self._gitlab:
-            self._gitlab = Gitlab(gitlab_url,
-                                  private_token=gitlab_token,
-                                  ssl_verify=ssl_verify,
+            self._gitlab = Gitlab(self.gitlab_url,
+                                  private_token=self.gitlab_token,
+                                  ssl_verify=self.ssl_verify,
                                   api_version=4,
                                   session=session)
-            if debug:
+            if self.debug:
                 self._gitlab.enable_debug()
         return self._gitlab
 
     @property
     def project(self):
         if not self._project:
-            self._project = Project(gitlab_repo, self.gitlab)
+            self._project = Project(self.gitlab_repo, self.gitlab)
         return self._project
 
 
-class JiraManager(Manager):
+class AtlassianManager(Manager):
+    def __init__(self, url, key, username, password, *args, **kwargs):
+        self.url = url
+        self.key = key
+        self.username = username
+        self.password = password
+        Manager.__init__(self, *args, **kwargs)
+
+
+class JiraManager(AtlassianManager):
     """
     Manage issues
     """
@@ -55,13 +62,13 @@ class JiraManager(Manager):
     @property
     def jira(self):
         if not self._jira:
-            self._jira = jira.JIRA(jira_url,
-                                   options={'verify': ssl_verify},
-                                   basic_auth=(atlassian_user, atlassian_pass))
+            self._jira = jira.JIRA(self.url,
+                                   options={'verify': self.ssl_verify},
+                                   basic_auth=(self.username, self.password))
         return self._jira
 
     def activeIssues(self):
-        jql = 'project={}'.format(jira_project_key)
+        jql = 'project={}'.format(self.key)
         jql += ' AND (resolution=Unresolved OR Sprint in openSprints())'
         return self.jira.search_issues(jql)
 

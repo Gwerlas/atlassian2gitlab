@@ -45,8 +45,8 @@ def test_flush_config(mocker):
     arg_parser = mocker.MagicMock()
     mocker.patch.object(cli, '_argparse', return_value=arg_parser)
 
-    gl_config = mocker.MagicMock()
-    mocker.patch.object(cli, '_configparse', return_value={'gitlab': gl_config})
+    config = mocker.MagicMock()
+    mocker.patch.object(cli, '_configparse', return_value={'gitlab': config})
 
     cli.flushConfig
 

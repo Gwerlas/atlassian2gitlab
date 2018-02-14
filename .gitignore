@@ -3,6 +3,7 @@
 .pytest_cache
 .ropeproject
 .tox
+.vscode
 *.egg-info
 *.pyc
 __pycache__
