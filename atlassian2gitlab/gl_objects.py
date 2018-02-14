@@ -1,4 +1,5 @@
 import logging
+import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import NotFoundException
 
 
@@ -47,7 +48,9 @@ class Project(Ressource):
         }
 
         if fields.assignee:
-            assignee = User(fields.assignee.name, self._gl).get()
+            name = a2g.user_map.get(
+                fields.assignee.name, fields.assignee.name)
+            assignee = User(name, self._gl).get()
             data['assignee_ids'] = [assignee.id]
 
         return self.get().issues.create(data)

@@ -17,4 +17,8 @@ if __name__ == "__main__":
         debug=args.debug,
         ssl_verify=args.gitlab.ssl_verify
     )
+
+    if args.user_map:
+        a2g.user_map = args.user_map
+
     manager.cp()

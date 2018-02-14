@@ -75,6 +75,9 @@ repo = namespaced/project/name
 [jira]
 url = https://pycontribs.atlassian.net
 key = Z3E79A974A
+
+[user_map]
+elan.ruusamae = john.doe
 ```
 
 ## Contributing

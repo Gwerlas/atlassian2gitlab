@@ -11,6 +11,7 @@ __version__ = 0.1
 
 logger = logging.getLogger(__name__)
 session = requests.Session()
+user_map = {}
 
 
 class Manager(object):

@@ -93,6 +93,8 @@ class CLI(object):
         config = self._configparse(args.config)
         args.gitlab = GitlabConfig(config['gitlab'])
         args.jira = JiraConfig(config['jira'])
+        if 'user_map' in config:
+            args.user_map = config['user_map']
         return args
 
     @property
