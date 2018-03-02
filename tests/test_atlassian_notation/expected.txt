@@ -1,0 +1,67 @@
+# Heading 1
+
+## Heading 2
+
+### Heading 3
+
+#### Heading 4
+
+##### Heading 5
+
+###### Heading 6
+
+---
+
+Text effects: **Strong**, _Italic_, ~~deleted~~, __inserted__, <sup>superscript</sup>, <sub>subscript</sub> and `monospaced`.
+
+|column 1|column 2|
+|--------|--------|
+|value 1|value 2|
+
+[http://atlassian.com](http://atlassian.com/) could even be writen [Atlassian](http://atlassian.com/).  
+John: [john.doe+jira@domain.tld](mailto:john.doe+jira@domain.tld)
+
+- Unordered list
+   - Unordered sub-list
+      1. Ordered sub-sub-list
+         - Unordered sub-sub-sub-list
+
+1. Ordered list
+   1. Ordered sub-list
+      - Unordered sub-sub-list
+         1. Ordered sub-sub-sub-list
+
+Smileys: :smiley: :disappointed: :yum: :grin: :wink: :thumbsup: :thumbsdown: :information_source: :white_check_mark: :x: :warning: :heavy_plus_sign: :heavy_minus_sign: :grey_question: :bulb: :star: :star: :star: :star:
+
+Quotes :
+
+> It’s no use going back to yesterday, because I was a different person then.
+
+-- [Lewis Carroll](https://www.goodreads.com/author/show/8164.Lewis_Carroll)
+
+Code from @gwerlas :
+
+```
+$ my_command.py -v --another-argument
+The return of my command !
+```
+
+HTML :
+
+```html
+<script src="scripts/main.js"></script>
+```
+
+JavaScript :
+
+```javascript
+function multiply(num1,num2,num3) {
+  return num1*num2*num3;
+}
+
+multiply(4,7,11);
+```
+
+Color :
+
+> **Color blocks doesn't exist in Markdown !**

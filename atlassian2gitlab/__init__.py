@@ -1,4 +1,5 @@
-from atlassian2gitlab.gl_objects import Project
+from atlassian2gitlab.at_objects import AtlassianNotation
+from atlassian2gitlab.gl_objects import Project, User
 from atlassian2gitlab.exceptions import A2GException
 import jira
 from gitlab import Gitlab
@@ -17,6 +18,7 @@ user_map = {}
 class Manager(object):
     _gitlab = None
     _project = None
+    _users = {}
 
     def __init__(self, gitlab_url, gitlab_token, gitlab_repo,
                  debug=False, ssl_verify=True):
@@ -41,8 +43,14 @@ class Manager(object):
     @property
     def project(self):
         if not self._project:
-            self._project = Project(self.gitlab_repo, self.gitlab)
+            self._project = Project(self.gitlab_repo, self)
         return self._project
+
+    def findUser(self, name):
+        username = user_map.get(name, name)
+        if username not in self._users:
+            self._users[username] = User(username, self)
+        return self._users[username]
 
 
 class AtlassianManager(Manager):
@@ -52,6 +60,9 @@ class AtlassianManager(Manager):
         self.username = username
         self.password = password
         Manager.__init__(self, *args, **kwargs)
+
+    def notation(self, content):
+        return AtlassianNotation(content, self)
 
 
 class JiraManager(AtlassianManager):

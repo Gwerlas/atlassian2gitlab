@@ -22,6 +22,12 @@ def test_project_manager():
     assert manager.project._name == 'fake/project'
 
 
+def test_find_user():
+    manager = a2g.Manager(None, None, None)
+    user = manager.findUser('me')
+    assert user._name == 'me'
+
+
 def test_jira_manager(mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     mock = mocker.patch('jira.JIRA')
@@ -91,3 +97,9 @@ def test_copy_jira_issues(caplog, mocker):
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'All 1 issues migrated')
     ]
+
+
+def test_get_jira_notation():
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    notation = manager.notation('text')
+    assert notation._raw == 'text'

@@ -1,0 +1,52 @@
+h1. Heading 1
+h2. Heading 2
+h3. Heading 3
+h4. Heading 4
+h5. Heading 5
+h6. Heading 6
+----
+Text effects: *Strong*, _Italic_, -deleted-, +inserted+, ^superscript^, ~subscript~ and {{monospaced}}.
+||column 1||column 2||
+|value 1|value 2|
+
+[http://atlassian.com|http://atlassian.com/] could even be writen [Atlassian|http://atlassian.com/].
+ John: [john.doe+jira@domain.tld|mailto:john.doe+jira@domain.tld]
+ * Unordered list
+ ** Unordered sub-list
+ ### Ordered sub-sub-list
+ **** Unordered sub-sub-sub-list
+
+ # Ordered list
+ ## Ordered sub-list
+ *** Unordered sub-sub-list
+ #### Ordered sub-sub-sub-list
+
+Smileys: :) :( :P :D ;) (y) (n) (i) (/) (x) (!) (+) (-) (?) (on) (*) (*r) (*g) (*b)
+
+Quotes :
+{quote}It’s no use going back to yesterday, because I was a different person then.
+{quote}
+??[Lewis Carroll|https://www.goodreads.com/author/show/8164.Lewis_Carroll]??
+
+Code from [~bach] :
+{code}
+$ my_command.py -v --another-argument
+The return of my command !
+{code}
+
+HTML :
+{code:html}
+<script src="scripts/main.js"></script>
+{code}
+
+JavaScript :
+{code:javascript}
+function multiply(num1,num2,num3) {
+  return num1*num2*num3;
+}
+
+multiply(4,7,11);
+{code}
+
+Color :
+{color:red}Color blocks doesn't exist in Markdown !{color}

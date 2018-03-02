@@ -8,25 +8,25 @@ from atlassian2gitlab.exceptions import A2GException
 def test_raise_exception_if_project_not_found():
     import platform
     print('Version: {}'.format(platform.version()))
-    gitlab = munchify({
+    manager = munchify({'gitlab': {
         'projects': {
             'list': lambda search=None: []
         }
-    })
-    project = Project('fake/name', gitlab)
+    }})
+    project = Project('fake/name', manager)
 
     with pytest.raises(A2GException):
         project.get()
 
 
 def test_raise_exception_if_other_projects_found():
-    gitlab = munchify({
+    manager = munchify({'gitlab': {
         'projects': {
             'list': lambda search=None: munchify([{'path_with_namespace':
                                                    'fake/project'}])
         }
-    })
-    project = Project('fake/name', gitlab)
+    }})
+    project = Project('fake/name', manager)
 
     with pytest.raises(A2GException):
         project.get()
@@ -41,56 +41,27 @@ def test_return_cached_project():
 
 
 def test_get_project():
-    gitlab = munchify({
-        'projects': {
-            'list': lambda search=None: munchify([{'path_with_namespace':
-                                                  'fake/project'}])
-        }
-    })
-    project = Project('fake/project', gitlab)
+    manager = munchify({'gitlab': {'projects': {
+        'list': lambda search=None: munchify([{'path_with_namespace':
+                                             'fake/project'}])
+    }}})
+    project = Project('fake/project', manager)
 
     assert project.get().path_with_namespace == 'fake/project'
-
-
-def test_add_jira_issue_without_assignee():
-    fields = munchify({
-        'created': 'now',
-        'summary': 'My title',
-        'assignee': None
-    })
-    gitlab = munchify({
-        'projects': {
-            'list': lambda search=None: []
-        }
-    })
-    project = Project('fake/project', gitlab)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data: data
-        }
-    })
-
-    assert project.addIssue(fields) == {
-        'created_at': 'now',
-        'title': 'My title'
-    }
 
 
 def test_add_jira_issue():
     fields = munchify({
         'created': 'now',
         'summary': 'My title',
-        'assignee': {'name': 'john.doe'}
+        'assignee': {'name': 'john.doe'},
+        'description': 'My description'
     })
-    gitlab = munchify({
-        'projects': {
-            'list': lambda search=None: []
-        },
-        'users': {
-            'list': lambda username: [munchify({'id': 1})]
-        }
+    manager = munchify({
+        'findUser': lambda name: munchify({'id': 1}),
+        'notation': lambda desc: munchify({'toMarkdown': lambda: desc})
     })
-    project = Project('fake/project', gitlab)
+    project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
             'create': lambda data: data
@@ -100,33 +71,9 @@ def test_add_jira_issue():
     assert project.addIssue(fields) == {
         'created_at': 'now',
         'title': 'My title',
-        'assignee_ids': [1]
+        'assignee_ids': [1],
+        'description': 'My description'
     }
-
-
-def test_raise_exception_if_assignee_not_found():
-    fields = munchify({
-        'created': 'now',
-        'summary': 'My title',
-        'assignee': {'name': 'john.doe'}
-    })
-    gitlab = munchify({
-        'projects': {
-            'list': lambda search=None: []
-        },
-        'users': {
-            'list': lambda username: []
-        }
-    })
-    project = Project('fake/project', gitlab)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data: data
-        }
-    })
-
-    with pytest.raises(A2GException):
-        project.addIssue(fields)
 
 
 def test_nothing_to_flush(caplog):

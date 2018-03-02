@@ -1,16 +1,19 @@
 import logging
-import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import NotFoundException
+from atlassian2gitlab.at_objects import JiraNotation
 
 
 class Ressource(object):
-    _gl = None
+    manager = None
     _name = None
     _item = None
 
-    def __init__(self, name, gitlab):
-        self._gl = gitlab
+    def __init__(self, name, manager):
+        self.manager = manager
         self._name = name
+
+    def __getattr__(self, name):
+        return getattr(self.get(), name)
 
 
 class Project(Ressource):
@@ -28,7 +31,7 @@ class Project(Ressource):
         """
         if not self._item:
             search = self._name.split('/')[1]
-            for project in self._gl.projects.list(search=search):
+            for project in self.manager.gitlab.projects.list(search=search):
                 if project.path_with_namespace == self._name:
                     self._item = project
                     return project
@@ -48,10 +51,12 @@ class Project(Ressource):
         }
 
         if fields.assignee:
-            name = a2g.user_map.get(
-                fields.assignee.name, fields.assignee.name)
-            assignee = User(name, self._gl).get()
+            assignee = self.manager.findUser(fields.assignee.name)
             data['assignee_ids'] = [assignee.id]
+
+        if fields.description:
+            description = self.manager.notation(fields.description)
+            data['description'] = description.toMarkdown()
 
         return self.get().issues.create(data)
 
@@ -92,7 +97,7 @@ class User(Ressource):
             gitlab.v4.objects.User
         """
         if not self._item:
-            users = self._gl.users.list(username=self._name)
+            users = self.manager.gitlab.users.list(username=self._name)
             if len(users) == 1:
                 self._item = users[0]
             else:
