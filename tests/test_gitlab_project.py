@@ -55,11 +55,13 @@ def test_add_jira_issue():
         'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
-        'description': 'My description'
+        'description': 'My description',
+        'fixVersions': [{}]
     })
     manager = munchify({
         'findUser': lambda name: munchify({'id': 1}),
-        'notation': lambda desc: munchify({'toMarkdown': lambda: desc})
+        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findMilestone': lambda version: munchify({'id': 1})
     })
     project = Project('fake/project', manager)
     project._item = munchify({
@@ -72,8 +74,24 @@ def test_add_jira_issue():
         'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1],
-        'description': 'My description'
+        'description': 'My description',
+        'milestone_id': 1
     }
+
+
+def test_add_milestone():
+    version = munchify({'released': True, 'releaseDate': '2008-04-12'})
+
+    project = Project('fake/project', None)
+    project._item = munchify({
+        'milestones': {
+            'create': lambda data: munchify({'due_date': 0, 'state_event': 0})
+        }
+    })
+
+    given = project.addMilestone(version)
+    assert given.due_date == '2008-04-12'
+    assert given.state_event == 'close'
 
 
 def test_nothing_to_flush(caplog):

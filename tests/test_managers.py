@@ -2,6 +2,7 @@ import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import A2GException
 import logging
 from munch import munchify
+from unittest.mock import MagicMock
 
 
 def test_gitlab_manager():
@@ -26,6 +27,29 @@ def test_find_user():
     manager = a2g.Manager(None, None, None)
     user = manager.findUser('me')
     assert user._name == 'me'
+
+
+def test_find_existing_milestone():
+    project = munchify({
+        'milestones': {
+            'list': lambda search: [munchify({'title': search})]
+        }
+    })
+    manager = a2g.Manager(None, None, None)
+    manager._project = project
+
+    assert manager.findMilestone('1.0').title == '1.0'
+
+
+def test_find_milestone():
+    project = munchify({
+        'milestones': {'list': lambda search: []},
+        'addMilestone': lambda version: munchify({'title': version})
+    })
+    manager = a2g.Manager(None, None, None)
+    manager._project = project
+
+    assert manager.findMilestone('2.0').title == '2.0'
 
 
 def test_jira_manager(mocker):

@@ -88,7 +88,7 @@ If You want to install dependencies and run tests manually :
 
 ```bash
 pip install -r requirements.txt
-pip install munch pytest-cov pytest-mock
+pip install munch pytest-cov pytest-mock pytest-datadir-ng
 pip install -e .
 pytest --cov=atlassian2gitlab
 

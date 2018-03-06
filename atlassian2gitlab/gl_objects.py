@@ -58,7 +58,26 @@ class Project(Ressource):
             description = self.manager.notation(fields.description)
             data['description'] = description.toMarkdown()
 
+        if len(fields.fixVersions):
+            version = fields.fixVersions[-1]
+            milestone = self.manager.findMilestone(version)
+            data['milestone_id'] = milestone.id
+
         return self.get().issues.create(data)
+
+    def addMilestone(self, version):
+        """
+        Create a mileston from a Jira version
+
+        Returns:
+            gitlab.v4.objects.Milestone
+        """
+        m = self.get().milestones.create({'title': str(version)})
+        if hasattr(version, 'releaseDate') and version.releaseDate:
+            m.due_date = version.releaseDate
+        if hasattr(version, 'released') and version.released:
+            m.state_event = 'close'
+        return m
 
     def flush(self):
         logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ import logging
 import requests
 
 
-__version__ = 0.1
+__version__ = 0.2
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,7 @@ user_map = {}
 class Manager(object):
     _gitlab = None
     _project = None
+    _milestones = {}
     _users = {}
 
     def __init__(self, gitlab_url, gitlab_token, gitlab_repo,
@@ -51,6 +52,16 @@ class Manager(object):
         if username not in self._users:
             self._users[username] = User(username, self)
         return self._users[username]
+
+    def findMilestone(self, version):
+        title = str(version)
+        if title not in self._milestones:
+            for m in self.project.milestones.list(search=title):
+                self._milestones[m.title] = m
+        if title not in self._milestones:
+            m = self.project.addMilestone(version)
+            self._milestones[m.title] = m
+        return self._milestones[title]
 
 
 class AtlassianManager(Manager):
