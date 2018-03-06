@@ -2,7 +2,6 @@ import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import A2GException
 import logging
 from munch import munchify
-from unittest.mock import MagicMock
 
 
 def test_gitlab_manager():
