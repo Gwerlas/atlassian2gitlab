@@ -175,7 +175,7 @@ def test_add_milestone_from_sprint():
     project._item = munchify({
         'milestones': {
             'create': lambda data: munchify({
-                'due_date': None, 
+                'due_date': None,
                 'state_event': None,
                 'save': lambda: None
             })
@@ -194,7 +194,7 @@ def test_add_milestone_from_version():
     project._item = munchify({
         'milestones': {
             'create': lambda data: munchify({
-                'due_date': None, 
+                'due_date': None,
                 'state_event': None,
                 'save': lambda: None
             })

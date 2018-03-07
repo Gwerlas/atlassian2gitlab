@@ -128,7 +128,7 @@ class Project(Ressource):
                     m.delete()
                     i += 1
                 except Exception as e:
-                    logger.warn('Milestone "%s" has not been deleted: %s', 
+                    logger.warn('Milestone "%s" has not been deleted: %s',
                                 m.title, e)
 
             if i == total:
