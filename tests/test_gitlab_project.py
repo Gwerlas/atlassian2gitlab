@@ -56,12 +56,41 @@ def test_add_jira_issue():
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
+        'fixVersions': []
+    })
+    manager = munchify({
+        'findUser': lambda name: munchify({'id': 1}),
+        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'getIssueLastSprint': lambda fields: None
+    })
+    project = Project('fake/project', manager)
+    project._item = munchify({
+        'issues': {
+            'create': lambda data: data
+        }
+    })
+
+    assert project.addIssue(fields) == {
+        'created_at': 'now',
+        'title': 'My title',
+        'assignee_ids': [1],
+        'description': 'My description'
+    }
+
+
+def test_add_jira_issue_with_version():
+    fields = munchify({
+        'created': 'now',
+        'summary': 'My title',
+        'assignee': {'name': 'john.doe'},
+        'description': 'My description',
         'fixVersions': [{}]
     })
     manager = munchify({
         'findUser': lambda name: munchify({'id': 1}),
         'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
-        'findMilestone': lambda version: munchify({'id': 1})
+        'findMilestone': lambda version: munchify({'id': 1}),
+        'getIssueLastSprint': lambda fields: None
     })
     project = Project('fake/project', manager)
     project._item = munchify({
@@ -79,13 +108,96 @@ def test_add_jira_issue():
     }
 
 
-def test_add_milestone():
+def test_add_jira_issue_with_sprint():
+    fields = munchify({
+        'created': 'now',
+        'summary': 'My title',
+        'assignee': {'name': 'john.doe'},
+        'description': 'My description',
+        'fixVersions': []
+    })
+    manager = munchify({
+        'findUser': lambda name: munchify({'id': 1}),
+        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findMilestone': lambda sprint: munchify({'id': 1}),
+        'getIssueLastSprint': lambda fields: 'Sprint 1'
+    })
+    project = Project('fake/project', manager)
+    project._item = munchify({
+        'issues': {
+            'create': lambda data: data
+        }
+    })
+
+    assert project.addIssue(fields) == {
+        'created_at': 'now',
+        'title': 'My title',
+        'assignee_ids': [1],
+        'description': 'My description',
+        'milestone_id': 1
+    }
+
+
+def test_add_jira_issue_with_both_version_and_sprint(mocker):
+    fields = munchify({
+        'created': 'now',
+        'summary': 'My title',
+        'assignee': {'name': 'john.doe'},
+        'description': 'My description',
+        'fixVersions': [{}]
+    })
+    manager = munchify({
+        'findUser': lambda name: munchify({'id': 1}),
+        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findMilestone': lambda sprint: munchify({'id': 1}),
+        'getIssueLastSprint': lambda fields: 'Sprint 1'
+    })
+    project = Project('fake/project', manager)
+    project._item = munchify({
+        'issues': {
+            'create': lambda data: data
+        }
+    })
+
+    assert project.addIssue(fields) == {
+        'created_at': 'now',
+        'title': 'My title',
+        'assignee_ids': [1],
+        'description': 'My description',
+        'milestone_id': 1
+    }
+
+
+def test_add_milestone_from_sprint():
+    sprint = munchify({'state': 'CLOSED', 'endDate': '2008-04-12'})
+
+    project = Project('fake/project', None)
+    project._item = munchify({
+        'milestones': {
+            'create': lambda data: munchify({
+                'due_date': None, 
+                'state_event': None,
+                'save': lambda: None
+            })
+        }
+    })
+
+    given = project.addMilestone(sprint)
+    assert given.due_date == '2008-04-12'
+    assert given.state_event == 'close'
+
+
+def test_add_milestone_from_version():
     version = munchify({'released': True, 'releaseDate': '2008-04-12'})
 
     project = Project('fake/project', None)
     project._item = munchify({
         'milestones': {
-            'create': lambda data: munchify({'due_date': 0, 'state_event': 0})
+            'create': lambda data: munchify({
+                'due_date': None, 
+                'state_event': None,
+                'save': lambda: None
+            })
         }
     })
 
@@ -99,6 +211,9 @@ def test_nothing_to_flush(caplog):
     project._item = munchify({
         'issues': {
             'list': lambda all: []
+        },
+        'milestones': {
+            'list': lambda all: []
         }
     })
     project.flush()
@@ -107,7 +222,7 @@ def test_nothing_to_flush(caplog):
     ]
 
 
-def test_flush_in_complete_failure(mocker, caplog):
+def test_flush_issues_in_complete_failure(mocker, caplog):
     project = Project('fake/project', object())
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
@@ -115,6 +230,9 @@ def test_flush_in_complete_failure(mocker, caplog):
     project._item = munchify({
         'issues': {
             'list': lambda all: [issue]
+        },
+        'milestones': {
+            'list': lambda all: []
         }
     })
     project.flush()
@@ -126,7 +244,7 @@ def test_flush_in_complete_failure(mocker, caplog):
     ]
 
 
-def test_flush_with_failure(mocker, caplog):
+def test_flush_issues_with_failure(mocker, caplog):
     project = Project('fake/project', object())
     issue_one = munchify({'id': 1})
     issue_one.delete = mocker.stub(name="issue_one")
@@ -136,6 +254,9 @@ def test_flush_with_failure(mocker, caplog):
     project._item = munchify({
         'issues': {
             'list': lambda all: [issue_one, issue_two]
+        },
+        'milestones': {
+            'list': lambda all: []
         }
     })
     project.flush()
@@ -148,17 +269,73 @@ def test_flush_with_failure(mocker, caplog):
     ]
 
 
+def test_flush_milestones_in_complete_failure(mocker, caplog):
+    project = Project('fake/project', object())
+    milestone = munchify({'title': 'Sprint 1'})
+    milestone.delete = mocker.stub(name="issue")
+    milestone.delete.side_effect = Exception('Fail !')
+    project._item = munchify({
+        'issues': {
+            'list': lambda all: []
+        },
+        'milestones': {
+            'list': lambda all: [milestone]
+        }
+    })
+    project.flush()
+    assert milestone.delete.call_count == 1
+    assert caplog.record_tuples == [
+        ('atlassian2gitlab.gl_objects', logging.WARNING,
+            'Milestone "Sprint 1" has not been deleted: Fail !'),
+        ('atlassian2gitlab.gl_objects', logging.ERROR,
+            'Any milestones deleted')
+    ]
+
+
+def test_flush_milestones_with_failure(mocker, caplog):
+    project = Project('fake/project', object())
+    milestone_one = munchify({'title': 'Sprint 1'})
+    milestone_one.delete = mocker.stub(name="milestone_one")
+    milestone_one.delete.side_effect = Exception('Fail !')
+    milestone_two = munchify({'title': 'Sprint 2'})
+    milestone_two.delete = mocker.stub(name="milestone_two")
+    project._item = munchify({
+        'issues': {
+            'list': lambda all: []
+        },
+        'milestones': {
+            'list': lambda all: [milestone_one, milestone_two]
+        }
+    })
+    project.flush()
+    assert milestone_one.delete.call_count == 1
+    assert milestone_two.delete.call_count == 1
+    assert caplog.record_tuples == [
+        ('atlassian2gitlab.gl_objects', logging.WARNING,
+            'Milestone "Sprint 1" has not been deleted: Fail !'),
+        ('atlassian2gitlab.gl_objects', logging.WARNING,
+            '1/2 milestones deleted')
+    ]
+
+
 def test_flush(mocker, caplog):
     project = Project('fake/project', object())
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
+    milestone = munchify({'title': 'Sprint 1'})
+    milestone.delete = mocker.stub(name="milestone")
     project._item = munchify({
         'issues': {
             'list': lambda all: [issue]
+        },
+        'milestones': {
+            'list': lambda all: [milestone]
         }
     })
     project.flush()
     assert issue.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.INFO, 'All 1 issues deleted')
+        ('atlassian2gitlab.gl_objects', logging.INFO, 'All 1 issues deleted'),
+        ('atlassian2gitlab.gl_objects', logging.INFO,
+            'All 1 milestones deleted')
     ]

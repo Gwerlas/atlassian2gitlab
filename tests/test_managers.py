@@ -126,3 +126,27 @@ def test_get_jira_notation():
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     notation = manager.notation('text')
     assert notation._raw == 'text'
+
+
+def test_get_last_sprint_when_issue_has_none():
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager._jira = munchify({
+        '_get_sprint_field_id': lambda: 1,
+    })
+    issue_fields = munchify({'customfield_1': []})
+
+    assert manager.getIssueLastSprint(issue_fields) is None
+
+
+def test_get_last_isue_sprint():
+    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager._jira = munchify({
+        '_get_sprint_field_id': lambda: 1,
+        'sprint': lambda id: id
+    })
+    issue_fields = munchify({'customfield_1': [
+        'greenhopper.service.sprint.Sprint@51bf9a8d[id=78,rapidViewId=13',
+        'greenhopper.service.sprint.Sprint@51bf8d9a[id=79,rapidViewId=13',
+    ]})
+
+    assert manager.getIssueLastSprint(issue_fields) == '79'

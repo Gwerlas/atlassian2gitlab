@@ -58,49 +58,86 @@ class Project(Ressource):
             description = self.manager.notation(fields.description)
             data['description'] = description.toMarkdown()
 
-        if len(fields.fixVersions):
+        sprint = self.manager.getIssueLastSprint(fields)
+        if sprint:
+            milestone = self.manager.findMilestone(sprint)
+            data['milestone_id'] = milestone.id
+        elif len(fields.fixVersions):
             version = fields.fixVersions[-1]
             milestone = self.manager.findMilestone(version)
             data['milestone_id'] = milestone.id
 
         return self.get().issues.create(data)
 
-    def addMilestone(self, version):
+    def addMilestone(self, obj):
         """
-        Create a mileston from a Jira version
+        Create a mileston from a Jira version or a Jira Agile Sprint
 
         Returns:
             gitlab.v4.objects.Milestone
         """
-        m = self.get().milestones.create({'title': str(version)})
-        if hasattr(version, 'releaseDate') and version.releaseDate:
-            m.due_date = version.releaseDate
-        if hasattr(version, 'released') and version.released:
+        m = self.get().milestones.create({'title': str(obj)})
+        toSave = False
+        if hasattr(obj, 'releaseDate') and obj.releaseDate:
+            m.due_date = obj.releaseDate
+            toSave = True
+        elif hasattr(obj, 'endDate') and obj.endDate:
+            m.due_date = obj.endDate
+            toSave = True
+        if hasattr(obj, 'released') and obj.released:
             m.state_event = 'close'
+            toSave = True
+        elif hasattr(obj, 'state') and obj.state == 'CLOSED':
+            m.state_event = 'close'
+            toSave = True
+        if toSave:
+            m.save()
         return m
 
     def flush(self):
         logger = logging.getLogger(__name__)
         issues = self.get().issues.list(all=True)
-        total = len(issues)
-        if total == 0:
+        milestones = self.get().milestones.list(all=True)
+        if len(issues) + len(milestones) == 0:
             logger.info('Nothing to do')
             return self
 
-        i = 0
-        for issue in issues:
-            try:
-                issue.delete()
-                i += 1
-            except Exception as e:
-                logger.warn('Issue %s has not been deleted: %s', issue.id, e)
+        if len(issues):
+            total = len(issues)
+            i = 0
+            for issue in issues:
+                try:
+                    issue.delete()
+                    i += 1
+                except Exception as e:
+                    id = issue.id
+                    logger.warn('Issue %s has not been deleted: %s', id, e)
 
-        if i == total:
-            logger.info('All %d issues deleted', total)
-        elif i == 0:
-            logger.error('Any issues deleted')
-        else:
-            logger.warn('%d/%d issues deleted', i, total)
+            if i == total:
+                logger.info('All %d issues deleted', total)
+            elif i == 0:
+                logger.error('Any issues deleted')
+            else:
+                logger.warn('%d/%d issues deleted', i, total)
+
+        if len(milestones):
+            total = len(milestones)
+            i = 0
+            for m in milestones:
+                try:
+                    m.delete()
+                    i += 1
+                except Exception as e:
+                    logger.warn('Milestone "%s" has not been deleted: %s', 
+                                m.title, e)
+
+            if i == total:
+                logger.info('All %d milestones deleted', total)
+            elif i == 0:
+                logger.error('Any milestones deleted')
+            else:
+                logger.warn('%d/%d milestones deleted', i, total)
+
         return self
 
 

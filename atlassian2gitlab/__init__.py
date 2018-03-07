@@ -53,13 +53,19 @@ class Manager(object):
             self._users[username] = User(username, self)
         return self._users[username]
 
-    def findMilestone(self, version):
-        title = str(version)
+    def findMilestone(self, obj):
+        """
+        Find Gitlab Milestone corresponding to the given object
+
+        Returns:
+            gitlab.v4.objects.Milestone
+        """
+        title = str(obj)
         if title not in self._milestones:
             for m in self.project.milestones.list(search=title):
                 self._milestones[m.title] = m
         if title not in self._milestones:
-            m = self.project.addMilestone(version)
+            m = self.project.addMilestone(obj)
             self._milestones[m.title] = m
         return self._milestones[title]
 
@@ -81,6 +87,7 @@ class JiraManager(AtlassianManager):
     Manage issues
     """
     _jira = None
+    _sprintCustomField = None
 
     @property
     def jira(self):
@@ -94,6 +101,24 @@ class JiraManager(AtlassianManager):
         jql = 'project={}'.format(self.key)
         jql += ' AND (resolution=Unresolved OR Sprint in openSprints())'
         return self.jira.search_issues(jql)
+
+    def getIssueLastSprint(self, fields):
+        """
+        Parse Sprints customfield and format it
+
+        Returns:
+            jira.resources.Sprint
+        """
+        if not self._sprintCustomField:
+            self._sprintCustomField = 'customfield_{}'.format(
+                self.jira._get_sprint_field_id())
+        sprints = getattr(fields, self._sprintCustomField)
+        if len(sprints):
+            import re
+            m = re.search(r'id=(\d+),', sprints[-1])
+            id = m.group(1)
+            return self.jira.sprint(id)
+        return None
 
     def cp(self):
         issues = self.activeIssues()
