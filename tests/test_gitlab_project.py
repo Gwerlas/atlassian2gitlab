@@ -51,16 +51,16 @@ def test_get_project():
 
 
 def test_add_jira_issue():
-    fields = munchify({
+    issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
-        'fixVersions': []
-    })
+        'fixVersions': [],
+        'attachment': []
+    }})
     manager = munchify({
-        'findUser': lambda name: munchify({'id': 1}),
-        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
         'getIssueLastSprint': lambda fields: None
     })
     project = Project('fake/project', manager)
@@ -70,7 +70,7 @@ def test_add_jira_issue():
         }
     })
 
-    assert project.addIssue(fields) == {
+    assert project.addIssue(issue) == {
         'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1],
@@ -79,16 +79,16 @@ def test_add_jira_issue():
 
 
 def test_add_jira_issue_with_version():
-    fields = munchify({
+    issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
-        'fixVersions': [{}]
-    })
+        'fixVersions': [{}],
+        'attachment': []
+    }})
     manager = munchify({
-        'findUser': lambda name: munchify({'id': 1}),
-        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
         'findMilestone': lambda version: munchify({'id': 1}),
         'getIssueLastSprint': lambda fields: None
     })
@@ -99,7 +99,7 @@ def test_add_jira_issue_with_version():
         }
     })
 
-    assert project.addIssue(fields) == {
+    assert project.addIssue(issue) == {
         'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1],
@@ -109,16 +109,16 @@ def test_add_jira_issue_with_version():
 
 
 def test_add_jira_issue_with_sprint():
-    fields = munchify({
+    issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
-        'fixVersions': []
-    })
+        'fixVersions': [],
+        'attachment': []
+    }})
     manager = munchify({
-        'findUser': lambda name: munchify({'id': 1}),
-        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
         'findMilestone': lambda sprint: munchify({'id': 1}),
         'getIssueLastSprint': lambda fields: 'Sprint 1'
     })
@@ -129,7 +129,7 @@ def test_add_jira_issue_with_sprint():
         }
     })
 
-    assert project.addIssue(fields) == {
+    assert project.addIssue(issue) == {
         'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1],
@@ -139,16 +139,16 @@ def test_add_jira_issue_with_sprint():
 
 
 def test_add_jira_issue_with_both_version_and_sprint(mocker):
-    fields = munchify({
+    issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
-        'fixVersions': [{}]
-    })
+        'fixVersions': [{}],
+        'attachment': []
+    }})
     manager = munchify({
-        'findUser': lambda name: munchify({'id': 1}),
-        'notation': lambda desc: munchify({'toMarkdown': lambda: desc}),
+        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
         'findMilestone': lambda sprint: munchify({'id': 1}),
         'getIssueLastSprint': lambda fields: 'Sprint 1'
     })
@@ -159,7 +159,7 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
         }
     })
 
-    assert project.addIssue(fields) == {
+    assert project.addIssue(issue) == {
         'created_at': 'now',
         'title': 'My title',
         'assignee_ids': [1],

@@ -3,12 +3,28 @@
 import re
 
 
-class AtlassianNotation(object):
+class AtlassianNotationConverter(object):
+    _attachments = []
     _forLater = {}
 
-    def __init__(self, text, manager):
-        self._raw = text
+    def __init__(self, manager):
+        """
+        Args:
+            atlassian2gitlab.AtlassianManager
+        """
         self.manager = manager
+
+    def _attachmentsToMarkdown(self, match):
+        """
+        Upload attachment and return the Markdown link
+
+        Returns:
+            str
+        """
+        for a in self._attachments:
+            if a.filename == match.group(1):
+                return self.manager.attachFile(a)['markdown']
+        return ''
 
     def _headingsToMarkdown(self, match):
         return '#' * int(match.group(1)) + ' ' + match.group(2) + '\n'
@@ -36,24 +52,25 @@ class AtlassianNotation(object):
         ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
         ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
         ... )
+        >>> converter = AtlassianNotationConverter(manager)
 
         >>> match = re.match(r'^([\*\#]+) ', '* ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '\\n- '
         >>> match = re.match(r'^([\*\#]+) ', '** ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '   - '
         >>> match = re.match(r'^([\*\#]+) ', '*#* ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '      - '
         >>> match = re.match(r'^([\*\#]+) ', '# ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '\\n1. '
         >>> match = re.match(r'^([\*\#]+) ', '*# ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '   1. '
         >>> match = re.match(r'^([\*\#]+) ', '**# ')
-        >>> AtlassianNotation('', manager)._listsToMarkdown(match)
+        >>> converter._listsToMarkdown(match)
         '      1. '
         """
         notation = match.group(1)
@@ -72,12 +89,14 @@ class AtlassianNotation(object):
         ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
         ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
         ... )
+        >>> converter = AtlassianNotationConverter(manager)
 
         >>> match = re.match(r'(.*)', 'blah', flags=re.DOTALL)
-        >>> AtlassianNotation('', manager)._quotesToMarkdown(match)
+        >>> converter._quotesToMarkdown(match)
         '\\n> blah'
+
         >>> match = re.match(r'(.*)', 'blah\\nblah', flags=re.DOTALL)
-        >>> AtlassianNotation('', manager)._quotesToMarkdown(match)
+        >>> converter._quotesToMarkdown(match)
         '\\n> blah\\n> blah'
         """
         return '\n' + re.sub(r'^', r'> ', match.group(1), flags=re.MULTILINE)
@@ -90,7 +109,7 @@ class AtlassianNotation(object):
             second += '-' * len(m.group(1)) + '|'
         return first + '\n' + second
 
-    def toMarkdown(self):
+    def toMarkdown(self, text):
         """
         Translate Atlassian Notation to Markdown
 
@@ -99,61 +118,62 @@ class AtlassianNotation(object):
         ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
         ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
         ... )
+        >>> converter = AtlassianNotationConverter(manager)
 
-        >>> AtlassianNotation('----', manager).toMarkdown()
+        >>> converter.toMarkdown('----')
         '---'
-        >>> AtlassianNotation('h1. Biggest heading', manager).toMarkdown()
-        '# Biggest heading'
-        >>> AtlassianNotation('h2. Bigger heading', manager).toMarkdown()
-        '## Bigger heading'
-        >>> AtlassianNotation('h3. Big heading', manager).toMarkdown()
-        '### Big heading'
-        >>> AtlassianNotation('h4. Normal heading', manager).toMarkdown()
-        '#### Normal heading'
-        >>> AtlassianNotation('h5. Small heading', manager).toMarkdown()
-        '##### Small heading'
-        >>> AtlassianNotation('h6. Smallest heading', manager).toMarkdown()
-        '###### Smallest heading'
+        >>> converter.toMarkdown('h1. Biggest')
+        '# Biggest'
+        >>> converter.toMarkdown('h2. Bigger')
+        '## Bigger'
+        >>> converter.toMarkdown('h3. Big')
+        '### Big'
+        >>> converter.toMarkdown('h4. Normal')
+        '#### Normal'
+        >>> converter.toMarkdown('h5. Small')
+        '##### Small'
+        >>> converter.toMarkdown('h6. Smallest')
+        '###### Smallest'
 
-        >>> AtlassianNotation('*strong*', manager).toMarkdown()
+        >>> converter.toMarkdown('*strong*')
         '**strong**'
-        >>> AtlassianNotation('_emphasis_', manager).toMarkdown()
+        >>> converter.toMarkdown('_emphasis_')
         '_emphasis_'
-        >>> AtlassianNotation('-deleted-', manager).toMarkdown()
+        >>> converter.toMarkdown('-deleted-')
         '~~deleted~~'
-        >>> AtlassianNotation('+inserted+', manager).toMarkdown()
+        >>> converter.toMarkdown('+inserted+')
         '__inserted__'
-        >>> AtlassianNotation('^superscript^', manager).toMarkdown()
+        >>> converter.toMarkdown('^superscript^')
         '<sup>superscript</sup>'
-        >>> AtlassianNotation('~subscript~', manager).toMarkdown()
+        >>> converter.toMarkdown('~subscript~')
         '<sub>subscript</sub>'
-        >>> AtlassianNotation('{{monospaced}}', manager).toMarkdown()
+        >>> converter.toMarkdown('{{monospaced}}')
         '`monospaced`'
 
-        >>> AtlassianNotation(
-        ...    '[http://jira.atlassian.com]', manager).toMarkdown()
+        >>> converter.toMarkdown('[http://jira.atlassian.com]')
         'http://jira.atlassian.com'
-        >>> AtlassianNotation(
-        ...    '[Atlassian|http://atlassian.com]', manager).toMarkdown()
+        >>> converter.toMarkdown('[Atlassian|http://atlassian.com]')
         '[Atlassian](http://atlassian.com)'
-        >>> AtlassianNotation(
-        ...    '[mailto:john.doe+jira@domain.tld]', manager).toMarkdown()
+        >>> converter.toMarkdown('[mailto:john.doe+jira@domain.tld]')
         '[john.doe+jira@domain.tld](mailto:john.doe+jira@domain.tld)'
 
-        >>> AtlassianNotation('* unordered list', manager).toMarkdown()
+        >>> converter.toMarkdown('* unordered list')
         '- unordered list'
-        >>> AtlassianNotation('# ordered list', manager).toMarkdown()
+        >>> converter.toMarkdown('# ordered list')
         '1. ordered list'
 
-        >>> AtlassianNotation('||heading 1||heading 2||', manager).toMarkdown()
+        >>> converter.toMarkdown('||heading 1||heading 2||')
         '|heading 1|heading 2|\\n|---------|---------|'
         """
-        tmp = self._raw.strip()
+        tmp = text.strip()
         tmp = re.sub(r'\r\n', r'\n', tmp)
         tmp = re.sub(r'\{code.*?\}.*?\{code\}',
                      self._keepItForLater,
                      tmp, flags=re.DOTALL)
         tmp = re.sub(r'\[.+?\]',
+                     self._keepItForLater,
+                     tmp, flags=re.MULTILINE)
+        tmp = re.sub(r'!.+?!',
                      self._keepItForLater,
                      tmp, flags=re.MULTILINE)
         text = ''
@@ -232,6 +252,10 @@ class AtlassianNotation(object):
             repl = string
             repl = re.sub(r'^\[(.*)\]$', self._linksToMarkdown, repl)
             repl = re.sub(
+                r'^!([^|]*)(?:\|.*)?!$',
+                self._attachmentsToMarkdown,
+                repl)
+            repl = re.sub(
                 r'^\{code:?(?P<lang>[a-z]*?)?\}\n*(?P<code>.+?)\n*\{code\}$',
                 r'\n```\g<lang>\n\g<code>\n```',
                 repl,
@@ -241,5 +265,8 @@ class AtlassianNotation(object):
         return text
 
 
-class JiraNotation(AtlassianNotation):
-    pass
+class JiraNotationConverter(AtlassianNotationConverter):
+    def __init__(self, manager, issue):
+        AtlassianNotationConverter.__init__(self, manager)
+        if hasattr(issue.fields, 'attachment'):
+            self._attachments = issue.fields.attachment

@@ -1,6 +1,6 @@
 import logging
+from atlassian2gitlab.at_objects import JiraNotationConverter
 from atlassian2gitlab.exceptions import NotFoundException
-from atlassian2gitlab.at_objects import JiraNotation
 
 
 class Ressource(object):
@@ -38,25 +38,29 @@ class Project(Ressource):
             raise NotFoundException("Project {} not found".format(self._name))
         return self._item
 
-    def addIssue(self, fields):
+    def addIssue(self, issue):
         """
         Create an issue from a Jira issue object
+
+        Args:
+            jira.resources.Issue
 
         Returns:
             gitlab.v4.objects.Issue
         """
+        fields = issue.fields
         data = {
             'created_at': fields.created,
             'title': fields.summary
         }
+        converter = JiraNotationConverter(self.manager, issue)
 
         if fields.assignee:
             assignee = self.manager.findUser(fields.assignee.name)
             data['assignee_ids'] = [assignee.id]
 
         if fields.description:
-            description = self.manager.notation(fields.description)
-            data['description'] = description.toMarkdown()
+            data['description'] = converter.toMarkdown(fields.description)
 
         sprint = self.manager.getIssueLastSprint(fields)
         if sprint:

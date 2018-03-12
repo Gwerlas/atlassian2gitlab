@@ -51,6 +51,21 @@ def test_find_milestone():
     assert manager.findMilestone('2.0').title == '2.0'
 
 
+def test_gitlab_upload(mocker):
+    project = munchify({
+        'upload': lambda filename, filedata: 'Gitlab attachment'
+    })
+    manager = a2g.Manager(None, None, None)
+    manager._project = project
+    attachment = mocker.MagicMock()
+    attachment.id = '1'
+    attachment.filename = 'blah.jpg'
+    attachment.get.return_value = 'Data'
+
+    assert manager.attachFile(attachment) == 'Gitlab attachment'
+    assert attachment.get.call_count == 1
+
+
 def test_jira_manager(mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     mock = mocker.patch('jira.JIRA')
@@ -61,7 +76,8 @@ def test_jira_manager(mocker):
 def test_no_jira_issues_to_copy(caplog):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     manager._jira = munchify({
-        'search_issues': lambda jql: []
+        '_get_sprint_field_id': lambda: 1,
+        'search_issues': lambda jql, fields: []
     })
     manager.cp()
     assert caplog.record_tuples == [
@@ -73,14 +89,15 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = munchify({
-        'search_issues': lambda jql: [issue]
+        '_get_sprint_field_id': lambda: 1,
+        'search_issues': lambda jql, fields: [issue]
     })
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
     manager._project.addIssue.side_effect = A2GException('Fail !')
 
     manager.cp()
 
-    manager._project.addIssue.assert_called_once_with({})
+    manager._project.addIssue.assert_called_once_with(issue)
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.WARNING, 'Skip issue PRO-42: Fail !'),
         ('atlassian2gitlab', logging.ERROR, 'Any issues migrated')
@@ -92,7 +109,8 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
     issue_one = munchify({'key': 'PRO-42', 'fields': {}})
     issue_two = munchify({'key': 'PRO-43', 'fields': {}})
     manager._jira = munchify({
-        'search_issues': lambda jql: [issue_one, issue_two]
+        '_get_sprint_field_id': lambda: 1,
+        'search_issues': lambda jql, fields: [issue_one, issue_two]
     })
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
     manager._project.addIssue.side_effect = [A2GException('Fail !'), None]
@@ -110,22 +128,17 @@ def test_copy_jira_issues(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = munchify({
-        'search_issues': lambda jql: [issue]
+        '_get_sprint_field_id': lambda: 1,
+        'search_issues': lambda jql, fields: [issue]
     })
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
 
     manager.cp()
 
-    manager._project.addIssue.assert_called_once_with({})
+    manager._project.addIssue.assert_called_once_with(issue)
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'All 1 issues migrated')
     ]
-
-
-def test_get_jira_notation():
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
-    notation = manager.notation('text')
-    assert notation._raw == 'text'
 
 
 def test_get_last_sprint_when_issue_has_none():
