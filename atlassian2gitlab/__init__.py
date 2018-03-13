@@ -1,12 +1,12 @@
 from atlassian2gitlab.gl_objects import Project, User
-from atlassian2gitlab.exceptions import A2GException
+from atlassian2gitlab.exceptions import A2GException, NotFoundException
 import jira
 from gitlab import Gitlab
 import logging
 import requests
 
 
-__version__ = 0.2
+__version__ = 0.3
 
 
 logger = logging.getLogger(__name__)
@@ -59,10 +59,29 @@ class Manager(object):
         return self._project
 
     def findUser(self, name):
-        username = user_map.get(name, name)
-        if username not in self._users:
-            self._users[username] = User(username, self)
-        return self._users[username]
+        """
+        Find Gitlab user
+
+        If a user is in the `user_map` dict, his name will be mapped, even if
+        it exists in gitlab.
+        But if the user is not found, we will try the special user `_default`.
+        Otherwise, the gitlab's token owner will be used.
+        """
+        if name not in self._users:
+            try:
+                username = user_map.get(name, name)
+                user = User(username, self)
+                user.get()
+                self._users[name] = user
+            except NotFoundException:
+                username = user_map.get('_default', 'current')
+                logging.getLogger(__name__).debug(
+                    'Try the {} user instead'.format(username))
+                if username == 'current':
+                    self.gitlab.auth()
+                    username = self.gitlab.user.username
+                self._users[name] = User(username, self)
+        return self._users[name]
 
     def findMilestone(self, obj):
         """
@@ -130,7 +149,7 @@ class JiraManager(AtlassianManager):
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
-            'summary']
+            'summary', 'reporter']
         fields.append('customfield_{}'.format(
             self.jira._get_sprint_field_id()))
         return self.jira.search_issues(jql, fields=', '.join(fields))

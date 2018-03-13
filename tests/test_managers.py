@@ -1,6 +1,7 @@
 import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import A2GException
 import logging
+import pytest
 from munch import munchify
 
 
@@ -22,8 +23,29 @@ def test_project_manager():
     assert manager.project._name == 'fake/project'
 
 
-def test_find_user():
+def test_use_current_user_if_user_not_found(mocker):
     manager = a2g.Manager(None, None, None)
+    gl = mocker.MagicMock()
+    manager._gitlab = gl
+
+    gl.users = mocker.MagicMock()
+    gl.users.list.return_value = ['not', 'found']
+    gl.user = mocker.MagicMock()
+    gl.user.username = 'current'
+
+    user = manager.findUser('user')
+    assert user._name == 'current'
+    assert gl.auth.call_count == 1
+
+
+def test_find_user(mocker):
+    manager = a2g.Manager(None, None, None)
+    gl = mocker.MagicMock()
+    manager._gitlab = gl
+
+    gl.users = mocker.MagicMock()
+    gl.users.list.return_value = ['me']
+
     user = manager.findUser('me')
     assert user._name == 'me'
 

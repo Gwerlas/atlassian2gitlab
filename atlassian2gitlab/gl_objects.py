@@ -54,6 +54,7 @@ class Project(Ressource):
             'title': fields.summary
         }
         converter = JiraNotationConverter(self.manager, issue)
+        owner = self.manager.findUser(fields.reporter.name)
 
         if fields.assignee:
             assignee = self.manager.findUser(fields.assignee.name)
@@ -71,7 +72,7 @@ class Project(Ressource):
             milestone = self.manager.findMilestone(version)
             data['milestone_id'] = milestone.id
 
-        return self.get().issues.create(data)
+        return self.get().issues.create(data, sudo=owner.username)
 
     def addMilestone(self, obj):
         """
@@ -161,7 +162,10 @@ class User(Ressource):
             if len(users) == 1:
                 self._item = users[0]
             else:
-                err = '{} users matching {} found'.format(len(users),
-                                                          self._name)
+                err = '{} users found matching {}'.format(
+                    len(users),
+                    self._name)
+                logging.getLogger(__name__).debug(
+                    "No such user `%s'" % self._name)
                 raise NotFoundException(err)
         return self._item

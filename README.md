@@ -75,12 +75,24 @@ repo = namespaced/project/name
 [jira]
 url = https://pycontribs.atlassian.net
 key = Z3E79A974A
+```
 
+### User mapping
+
+You can map user names between the two platforms adding a `user_map` section to the configuration file :
+
+```ini
 [user_map]
+_default = admin.user
 elan.ruusamae = john.doe
 ```
 
-## Contributing
+If a user is in the `user_map` section, his name will be mapped, even if it exists in gitlab.
+But if the user is not found, we will try the special user `_default`.
+Otherwise, the gitlab's token owner will be used.
+
+Contributing
+------------
 
 Install Python, PIP and Tox. Run Tox to check your environment.
 

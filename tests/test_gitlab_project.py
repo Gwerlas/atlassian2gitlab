@@ -54,6 +54,7 @@ def test_add_jira_issue():
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
+        'reporter': {'name': 'john.doe'},
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
         'fixVersions': [],
@@ -66,7 +67,7 @@ def test_add_jira_issue():
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
-            'create': lambda data: data
+            'create': lambda data, sudo: data
         }
     })
 
@@ -82,6 +83,7 @@ def test_add_jira_issue_with_version():
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
+        'reporter': {'name': 'john.doe'},
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
         'fixVersions': [{}],
@@ -95,7 +97,7 @@ def test_add_jira_issue_with_version():
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
-            'create': lambda data: data
+            'create': lambda data, sudo: data
         }
     })
 
@@ -112,6 +114,7 @@ def test_add_jira_issue_with_sprint():
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
+        'reporter': {'name': 'john.doe'},
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
         'fixVersions': [],
@@ -125,7 +128,7 @@ def test_add_jira_issue_with_sprint():
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
-            'create': lambda data: data
+            'create': lambda data, sudo: data
         }
     })
 
@@ -142,6 +145,7 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
+        'reporter': {'name': 'john.doe'},
         'assignee': {'name': 'john.doe'},
         'description': 'My description',
         'fixVersions': [{}],
@@ -155,7 +159,7 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
-            'create': lambda data: data
+            'create': lambda data, sudo: data
         }
     })
 
