@@ -21,4 +21,7 @@ if __name__ == "__main__":
     if 'user_map' in args:
         a2g.user_map = args.user_map
 
+    if 'story_points' in args:
+        manager.mapStoryPoints(args.story_points)
+
     manager.cp()

@@ -50,7 +50,7 @@ def test_get_project():
     assert project.get().path_with_namespace == 'fake/project'
 
 
-def test_add_jira_issue():
+def test_add_jira_issue(mocker):
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
@@ -60,10 +60,10 @@ def test_add_jira_issue():
         'fixVersions': [],
         'attachment': []
     }})
-    manager = munchify({
-        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
-        'getIssueLastSprint': lambda fields: None
-    })
+    manager = mocker.MagicMock()
+    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
+    manager.getIssueLastSprint.return_value = None
+    manager.getFieldId.return_value = 'field1'
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -79,7 +79,7 @@ def test_add_jira_issue():
     }
 
 
-def test_add_jira_issue_with_version():
+def test_add_jira_issue_with_version(mocker):
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
@@ -89,11 +89,11 @@ def test_add_jira_issue_with_version():
         'fixVersions': [{}],
         'attachment': []
     }})
-    manager = munchify({
-        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
-        'findMilestone': lambda version: munchify({'id': 1}),
-        'getIssueLastSprint': lambda fields: None
-    })
+    manager = mocker.MagicMock()
+    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
+    manager.findMilestone.return_value = munchify({'id': 1})
+    manager.getIssueLastSprint.return_value = None
+    manager.getFieldId.return_value = 'field1'
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -110,7 +110,7 @@ def test_add_jira_issue_with_version():
     }
 
 
-def test_add_jira_issue_with_sprint():
+def test_add_jira_issue_with_sprint(mocker):
     issue = munchify({'fields': {
         'created': 'now',
         'summary': 'My title',
@@ -120,11 +120,11 @@ def test_add_jira_issue_with_sprint():
         'fixVersions': [],
         'attachment': []
     }})
-    manager = munchify({
-        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
-        'findMilestone': lambda sprint: munchify({'id': 1}),
-        'getIssueLastSprint': lambda fields: 'Sprint 1'
-    })
+    manager = mocker.MagicMock()
+    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
+    manager.findMilestone.return_value = munchify({'id': 1})
+    manager.getIssueLastSprint.return_value = 'Sprint 1'
+    manager.getFieldId.return_value = 'field1'
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -151,11 +151,11 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
         'fixVersions': [{}],
         'attachment': []
     }})
-    manager = munchify({
-        'findUser': lambda name: munchify({'id': 1, 'username': 'jdoe'}),
-        'findMilestone': lambda sprint: munchify({'id': 1}),
-        'getIssueLastSprint': lambda fields: 'Sprint 1'
-    })
+    manager = mocker.MagicMock()
+    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
+    manager.findMilestone.return_value = munchify({'id': 1})
+    manager.getIssueLastSprint.return_value = 'Sprint 1'
+    manager.getFieldId.return_value = 'field1'
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -170,6 +170,39 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
         'description': 'My description',
         'milestone_id': 1
     }
+
+
+def test_add_jira_issue_with_story_points(mocker):
+    issue = munchify({'fields': {
+        'created': 'now',
+        'summary': 'My title',
+        'reporter': {'name': 'john.doe'},
+        'assignee': {'name': 'john.doe'},
+        'description': 'My description',
+        'fixVersions': [],
+        'attachment': [],
+        'field1': 10.0
+    }})
+    manager = mocker.MagicMock()
+    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
+    manager.getIssueLastSprint.return_value = None
+    manager.getFieldId.return_value = 'field1'
+    manager.getIssueWeight.return_value = 9
+    project = Project('fake/project', manager)
+    project._item = munchify({
+        'issues': {
+            'create': lambda data, sudo: data
+        }
+    })
+
+    assert project.addIssue(issue) == {
+        'created_at': 'now',
+        'title': 'My title',
+        'assignee_ids': [1],
+        'description': 'My description',
+        'weight': 9
+    }
+    manager.getIssueWeight.assert_called_once_with(10.0)
 
 
 def test_add_milestone_from_sprint():

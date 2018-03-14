@@ -95,6 +95,8 @@ class CLI(object):
         args.jira = JiraConfig(config['jira'])
         if 'user_map' in config:
             args.user_map = config['user_map']
+        if 'story_points' in config:
+            args.story_points = config['story_points']
         return args
 
     @property

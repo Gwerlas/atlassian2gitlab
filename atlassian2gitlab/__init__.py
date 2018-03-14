@@ -12,17 +12,6 @@ __version__ = 0.3
 logger = logging.getLogger(__name__)
 session = requests.Session()
 user_map = {}
-storyPoint_map = {
-    1.0: 1,
-    2.0: 2,
-    3.0: 3,
-    5.0: 4,
-    8.0: 5,
-    13.0: 6,
-    20.0: 7,
-    40.0: 8,
-    100.0: 9
-}
 
 
 class Manager(object):
@@ -134,8 +123,16 @@ class JiraManager(AtlassianManager):
     """
     Manage issues
     """
+    _fields = None
     _jira = None
-    _sprintCustomField = None
+    storyPoint_map = {
+        5: 4,
+        8: 5,
+        13: 6,
+        21: 7,
+        34: 8,
+        55: 9
+    }
 
     @property
     def jira(self):
@@ -146,12 +143,17 @@ class JiraManager(AtlassianManager):
                 basic_auth=(self.username, self.password))
         return self._jira
 
+    def getFieldId(self, name):
+        if not self._fields:
+            self._fields = self.jira.fields()
+        return [f['id'] for f in self._fields if f['name'] == name][0]
+
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
             'summary', 'reporter']
-        fields.append('customfield_{}'.format(
-            self.jira._get_sprint_field_id()))
+        fields.append(self.getFieldId('Sprint'))
+        fields.append(self.getFieldId('Story Points'))
         return self.jira.search_issues(jql, fields=', '.join(fields))
 
     def activeIssues(self):
@@ -166,10 +168,7 @@ class JiraManager(AtlassianManager):
         Returns:
             jira.resources.Sprint
         """
-        if not self._sprintCustomField:
-            self._sprintCustomField = 'customfield_{}'.format(
-                self.jira._get_sprint_field_id())
-        sprints = getattr(fields, self._sprintCustomField)
+        sprints = getattr(fields, self.getFieldId('Sprint'))
         if sprints:
             import re
             m = re.search(r'id=(\d+),', sprints[-1])
@@ -200,3 +199,52 @@ class JiraManager(AtlassianManager):
             logger.warn('%d/%d issues migrated', i, len(issues))
 
         return self
+
+    def mapStoryPoints(self, dict):
+        """
+        Add story points mapping to the existing map
+
+        Configparser send DEFAULTSECT, so we have to ignore no numerical keys.
+
+        >>> manager = JiraManager(None, None, None, None, None, None, None)
+        >>> manager.storyPoint_map[5]
+        4
+        >>> manager.mapStoryPoints({'6': '4', 'blah': 'blah'})
+        >>> manager.storyPoint_map[6]
+        4
+        >>> 'blah' in manager.storyPoint_map
+        False
+        """
+        for k, v in dict.items():
+            if not k.isdigit():
+                continue
+            key = int(k)
+            value = int(v)
+            self.storyPoint_map[key] = value
+
+    def getIssueWeight(self, number):
+        """
+        Return the appropriate issue weight for the given number
+
+        Search the given number in the Fibonaci suite, commonly used by SCRUM
+        teams. If the number is not in the convertion map, we use the value as
+        is, but limited at 9 (the max issue weight).
+
+        >>> manager = JiraManager(None, None, None, None, None, None, None)
+        >>> manager.getIssueWeight(1)
+        1
+        >>> manager.getIssueWeight(5)
+        4
+        >>> manager.getIssueWeight(6)
+        6
+        >>> manager.getIssueWeight(13)
+        6
+        >>> manager.getIssueWeight(150)
+        9
+
+        Returns:
+            int
+        """
+        n = int(number)
+        v = self.storyPoint_map.get(n, n)
+        return 9 if v > 9 else v

@@ -91,6 +91,35 @@ If a user is in the `user_map` section, his name will be mapped, even if it exis
 But if the user is not found, we will try the special user `_default`.
 Otherwise, the gitlab's token owner will be used.
 
+### Issue weight
+
+You can convert Jira story points to Gitlab issue weight using a `story_points` section in the config file.  
+
+
+```ini
+[story_points]
+; Jira => Gitlab
+20 = 7
+40 = 8
+100 = 9
+```
+
+By default, we convert from the Fibonaci suite, commonly used by SCRUM teams, to Gitlab issue weight :
+
+| Story points (Jira) | Issue weight (Gitlab) |
+| ------------------- | --------------------- |
+|          1          |           1           |
+|          2          |           2           |
+|          3          |           3           |
+|          5          |           4           |
+|          8          |           5           |
+|         13          |           6           |
+|         21          |           7           |
+|         34          |           8           |
+|         55          |           9           |
+
+If the story points value is nor in this table, nor in the config file map, we use the value as is, but limited at 9 (the max issue weight).
+
 Contributing
 ------------
 

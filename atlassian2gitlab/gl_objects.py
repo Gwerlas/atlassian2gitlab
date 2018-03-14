@@ -72,6 +72,11 @@ class Project(Ressource):
             milestone = self.manager.findMilestone(version)
             data['milestone_id'] = milestone.id
 
+        spField = self.manager.getFieldId('Story Points')
+        if hasattr(fields, spField) and getattr(fields, spField):
+            sp = getattr(fields, spField)
+            data['weight'] = self.manager.getIssueWeight(sp)
+
         return self.get().issues.create(data, sudo=owner.username)
 
     def addMilestone(self, obj):

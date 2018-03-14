@@ -61,7 +61,8 @@ def test_migration_config(mocker):
     returns = {
         'gitlab': mocker.MagicMock(),
         'jira': mocker.MagicMock(),
-        'user_map': {}}
+        'user_map': {},
+        'story_points': {}}
     mocker.patch.object(cli, '_configparse', return_value=returns)
 
     cli.migrationConfig

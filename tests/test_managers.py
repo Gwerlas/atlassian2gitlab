@@ -95,12 +95,14 @@ def test_jira_manager(mocker):
     mock.call_count == 1
 
 
-def test_no_jira_issues_to_copy(caplog):
+def test_no_jira_issues_to_copy(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
-    manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
-        'search_issues': lambda jql, fields: []
-    })
+    manager._jira = mocker.MagicMock()
+    manager._jira.fields.return_value = [
+        {'name': 'Sprint', 'id': 'field1'},
+        {'name': 'Story Points', 'id': 'field2'},
+    ]
+    manager._jira.search_issues.return_value = []
     manager.cp()
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'Nothing to do')
@@ -110,10 +112,12 @@ def test_no_jira_issues_to_copy(caplog):
 def test_copy_jira_issues_in_failure(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
-    manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
-        'search_issues': lambda jql, fields: [issue]
-    })
+    manager._jira = mocker.MagicMock()
+    manager._jira.fields.return_value = [
+        {'name': 'Sprint', 'id': 'field1'},
+        {'name': 'Story Points', 'id': 'field2'},
+    ]
+    manager._jira.search_issues.return_value = [issue]
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
     manager._project.addIssue.side_effect = A2GException('Fail !')
 
@@ -130,10 +134,12 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue_one = munchify({'key': 'PRO-42', 'fields': {}})
     issue_two = munchify({'key': 'PRO-43', 'fields': {}})
-    manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
-        'search_issues': lambda jql, fields: [issue_one, issue_two]
-    })
+    manager._jira = mocker.MagicMock()
+    manager._jira.fields.return_value = [
+        {'name': 'Sprint', 'id': 'field1'},
+        {'name': 'Story Points', 'id': 'field2'},
+    ]
+    manager._jira.search_issues.return_value = [issue_one, issue_two]
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
     manager._project.addIssue.side_effect = [A2GException('Fail !'), None]
 
@@ -149,10 +155,12 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
 def test_copy_jira_issues(caplog, mocker):
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     issue = munchify({'key': 'PRO-42', 'fields': {}})
-    manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
-        'search_issues': lambda jql, fields: [issue]
-    })
+    manager._jira = mocker.MagicMock()
+    manager._jira.fields.return_value = [
+        {'name': 'Sprint', 'id': 'field1'},
+        {'name': 'Story Points', 'id': 'field2'},
+    ]
+    manager._jira.search_issues.return_value = [issue]
     manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
 
     manager.cp()
@@ -166,7 +174,7 @@ def test_copy_jira_issues(caplog, mocker):
 def test_get_last_sprint_when_issue_has_none():
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
+        'fields': lambda: [{'name': 'Sprint', 'id': 'customfield_1'}],
     })
     issue_fields = munchify({'customfield_1': []})
 
@@ -176,7 +184,7 @@ def test_get_last_sprint_when_issue_has_none():
 def test_get_last_isue_sprint():
     manager = a2g.JiraManager(None, None, None, None, None, None, None)
     manager._jira = munchify({
-        '_get_sprint_field_id': lambda: 1,
+        'fields': lambda: [{'name': 'Sprint', 'id': 'customfield_1'}],
         'sprint': lambda id: id
     })
     issue_fields = munchify({'customfield_1': [
