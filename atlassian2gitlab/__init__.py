@@ -1,4 +1,4 @@
-from atlassian2gitlab.gl_objects import Project, User
+from atlassian2gitlab.gl_resources import Project, ProjectMilestone, User
 from atlassian2gitlab.exceptions import A2GException, NotFoundException
 import jira
 from gitlab import Gitlab
@@ -72,20 +72,20 @@ class Manager(object):
                 self._users[name] = User(username, self)
         return self._users[name]
 
-    def findMilestone(self, obj):
+    def findMilestone(self, title):
         """
-        Find Gitlab Milestone corresponding to the given object
+        Return the expected project milestone
+
+        We get informations from Gitlab only if necessary, the milestone isn't
+        created until we call the `save()` method or the `id` property.
+        It's created once, if a milestone with the same title exists, it will
+        be used.
 
         Returns:
-            gitlab.v4.objects.Milestone
+            atlassian2gitlab.gl_resources.ProjectMilestone
         """
-        title = str(obj)
         if title not in self._milestones:
-            for m in self.project.milestones.list(search=title):
-                self._milestones[m.title] = m
-        if title not in self._milestones:
-            m = self.project.addMilestone(obj)
-            self._milestones[m.title] = m
+            self._milestones[title] = ProjectMilestone(title, self)
         return self._milestones[title]
 
     def attachFile(self, attachment):

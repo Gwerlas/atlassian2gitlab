@@ -1,7 +1,7 @@
 import pytest
 import logging
 from munch import munchify
-from atlassian2gitlab.gl_objects import Project
+from atlassian2gitlab.gl_resources import Project
 from atlassian2gitlab.exceptions import A2GException
 
 
@@ -91,9 +91,12 @@ def test_add_jira_issue_with_version(mocker):
     }})
     manager = mocker.MagicMock()
     manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.findMilestone.return_value = munchify({'id': 1})
     manager.getIssueLastSprint.return_value = None
     manager.getFieldId.return_value = 'field1'
+    milestone = mocker.MagicMock()
+    milestone.fillFromJiraVersion.return_value = milestone
+    milestone.id = 1
+    manager.findMilestone.return_value = milestone
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -122,9 +125,12 @@ def test_add_jira_issue_with_sprint(mocker):
     }})
     manager = mocker.MagicMock()
     manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.findMilestone.return_value = munchify({'id': 1})
     manager.getIssueLastSprint.return_value = 'Sprint 1'
     manager.getFieldId.return_value = 'field1'
+    milestone = mocker.MagicMock()
+    milestone.fillFromJiraSprint.return_value = milestone
+    milestone.id = 1
+    manager.findMilestone.return_value = milestone
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -153,9 +159,12 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
     }})
     manager = mocker.MagicMock()
     manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.findMilestone.return_value = munchify({'id': 1})
     manager.getIssueLastSprint.return_value = 'Sprint 1'
     manager.getFieldId.return_value = 'field1'
+    milestone = mocker.MagicMock()
+    milestone.fillFromJiraSprint.return_value = milestone
+    milestone.id = 1
+    manager.findMilestone.return_value = milestone
     project = Project('fake/project', manager)
     project._item = munchify({
         'issues': {
@@ -170,6 +179,7 @@ def test_add_jira_issue_with_both_version_and_sprint(mocker):
         'description': 'My description',
         'milestone_id': 1
     }
+    assert milestone.fillFromJiraVersion.call_count == 0
 
 
 def test_add_jira_issue_with_story_points(mocker):
@@ -205,44 +215,6 @@ def test_add_jira_issue_with_story_points(mocker):
     manager.getIssueWeight.assert_called_once_with(10.0)
 
 
-def test_add_milestone_from_sprint():
-    sprint = munchify({'state': 'CLOSED', 'endDate': '2008-04-12'})
-
-    project = Project('fake/project', None)
-    project._item = munchify({
-        'milestones': {
-            'create': lambda data: munchify({
-                'due_date': None,
-                'state_event': None,
-                'save': lambda: None
-            })
-        }
-    })
-
-    given = project.addMilestone(sprint)
-    assert given.due_date == '2008-04-12'
-    assert given.state_event == 'close'
-
-
-def test_add_milestone_from_version():
-    version = munchify({'released': True, 'releaseDate': '2008-04-12'})
-
-    project = Project('fake/project', None)
-    project._item = munchify({
-        'milestones': {
-            'create': lambda data: munchify({
-                'due_date': None,
-                'state_event': None,
-                'save': lambda: None
-            })
-        }
-    })
-
-    given = project.addMilestone(version)
-    assert given.due_date == '2008-04-12'
-    assert given.state_event == 'close'
-
-
 def test_nothing_to_flush(caplog):
     project = Project('fake/project', object())
     project._item = munchify({
@@ -255,7 +227,7 @@ def test_nothing_to_flush(caplog):
     })
     project.flush()
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.INFO, 'Nothing to do')
+        ('atlassian2gitlab.gl_resources', logging.INFO, 'Nothing to do')
     ]
 
 
@@ -275,9 +247,9 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
     project.flush()
     assert issue.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.WARNING,
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
             'Issue 1 has not been deleted: Fail !'),
-        ('atlassian2gitlab.gl_objects', logging.ERROR, 'Any issues deleted')
+        ('atlassian2gitlab.gl_resources', logging.ERROR, 'Any issues deleted')
     ]
 
 
@@ -300,9 +272,10 @@ def test_flush_issues_with_failure(mocker, caplog):
     assert issue_one.delete.call_count == 1
     assert issue_two.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.WARNING,
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
             'Issue 1 has not been deleted: Fail !'),
-        ('atlassian2gitlab.gl_objects', logging.WARNING, '1/2 issues deleted')
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
+            '1/2 issues deleted')
     ]
 
 
@@ -322,9 +295,9 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
     project.flush()
     assert milestone.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.WARNING,
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
             'Milestone "Sprint 1" has not been deleted: Fail !'),
-        ('atlassian2gitlab.gl_objects', logging.ERROR,
+        ('atlassian2gitlab.gl_resources', logging.ERROR,
             'Any milestones deleted')
     ]
 
@@ -348,9 +321,9 @@ def test_flush_milestones_with_failure(mocker, caplog):
     assert milestone_one.delete.call_count == 1
     assert milestone_two.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.WARNING,
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
             'Milestone "Sprint 1" has not been deleted: Fail !'),
-        ('atlassian2gitlab.gl_objects', logging.WARNING,
+        ('atlassian2gitlab.gl_resources', logging.WARNING,
             '1/2 milestones deleted')
     ]
 
@@ -372,7 +345,8 @@ def test_flush(mocker, caplog):
     project.flush()
     assert issue.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.gl_objects', logging.INFO, 'All 1 issues deleted'),
-        ('atlassian2gitlab.gl_objects', logging.INFO,
+        ('atlassian2gitlab.gl_resources', logging.INFO,
+            'All 1 issues deleted'),
+        ('atlassian2gitlab.gl_resources', logging.INFO,
             'All 1 milestones deleted')
     ]

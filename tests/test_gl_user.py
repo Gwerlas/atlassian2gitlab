@@ -1,5 +1,5 @@
 import pytest
-from atlassian2gitlab.gl_objects import User
+from atlassian2gitlab.gl_resources import User
 from atlassian2gitlab.exceptions import A2GException
 from munch import munchify
 

@@ -63,14 +63,8 @@ def test_find_existing_milestone():
 
 
 def test_find_milestone():
-    project = munchify({
-        'milestones': {'list': lambda search: []},
-        'addMilestone': lambda version: munchify({'title': version})
-    })
     manager = a2g.Manager(None, None, None)
-    manager._project = project
-
-    assert manager.findMilestone('2.0').title == '2.0'
+    assert manager.findMilestone('2.0')._name == '2.0'
 
 
 def test_gitlab_upload(mocker):
@@ -118,7 +112,7 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
         {'name': 'Story Points', 'id': 'field2'},
     ]
     manager._jira.search_issues.return_value = [issue]
-    manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
+    manager._project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     manager._project.addIssue.side_effect = A2GException('Fail !')
 
     manager.cp()
@@ -140,7 +134,7 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
         {'name': 'Story Points', 'id': 'field2'},
     ]
     manager._jira.search_issues.return_value = [issue_one, issue_two]
-    manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
+    manager._project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     manager._project.addIssue.side_effect = [A2GException('Fail !'), None]
 
     manager.cp()
@@ -161,7 +155,7 @@ def test_copy_jira_issues(caplog, mocker):
         {'name': 'Story Points', 'id': 'field2'},
     ]
     manager._jira.search_issues.return_value = [issue]
-    manager._project = mocker.patch('atlassian2gitlab.gl_objects.Project')
+    manager._project = mocker.patch('atlassian2gitlab.gl_resources.Project')
 
     manager.cp()
 

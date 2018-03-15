@@ -1,4 +1,4 @@
-from atlassian2gitlab.at_objects import JiraNotationConverter
+from atlassian2gitlab.at_resources import JiraNotationConverter
 from munch import munchify
 import re
 

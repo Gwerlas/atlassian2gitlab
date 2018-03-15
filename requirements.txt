@@ -1,4 +1,4 @@
 colorlog
 configparser
-jira==1.0.10
+jira
 python-gitlab

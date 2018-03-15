@@ -1,22 +1,42 @@
 import logging
-from atlassian2gitlab.at_objects import JiraNotationConverter
+from atlassian2gitlab.at_resources import JiraNotationConverter
 from atlassian2gitlab.exceptions import NotFoundException
 
 
-class Ressource(object):
-    manager = None
+class Resource(object):
     _name = None
     _item = None
+    manager = None
+    toSave = False
 
     def __init__(self, name, manager):
+        self.logger = logging.getLogger(__name__)
         self.manager = manager
         self._name = name
 
     def __getattr__(self, name):
         return getattr(self.get(), name)
 
+    def create(self):
+        raise NotImplementedError
 
-class Project(Ressource):
+    def get(self):
+        raise NotImplementedError
+
+    def save(self):
+        """
+        Save the resource to Gitlab
+
+        Returns:
+            Resource
+        """
+        if self.toSave:
+            self.get().save()
+            self.toSave = False
+        return self
+
+
+class Project(Resource):
     _users = {}
 
     def get(self):
@@ -65,12 +85,12 @@ class Project(Ressource):
 
         sprint = self.manager.getIssueLastSprint(fields)
         if sprint:
-            milestone = self.manager.findMilestone(sprint)
-            data['milestone_id'] = milestone.id
+            milestone = self.manager.findMilestone(str(sprint))
+            data['milestone_id'] = milestone.fillFromJiraSprint(sprint).id
         elif len(fields.fixVersions):
             version = fields.fixVersions[-1]
-            milestone = self.manager.findMilestone(version)
-            data['milestone_id'] = milestone.id
+            milestone = self.manager.findMilestone(str(version))
+            data['milestone_id'] = milestone.fillFromJiraVersion(version).id
 
         spField = self.manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
@@ -78,31 +98,6 @@ class Project(Ressource):
             data['weight'] = self.manager.getIssueWeight(sp)
 
         return self.get().issues.create(data, sudo=owner.username)
-
-    def addMilestone(self, obj):
-        """
-        Create a mileston from a Jira version or a Jira Agile Sprint
-
-        Returns:
-            gitlab.v4.objects.Milestone
-        """
-        m = self.get().milestones.create({'title': str(obj)})
-        toSave = False
-        if hasattr(obj, 'releaseDate') and obj.releaseDate:
-            m.due_date = obj.releaseDate
-            toSave = True
-        elif hasattr(obj, 'endDate') and obj.endDate:
-            m.due_date = obj.endDate
-            toSave = True
-        if hasattr(obj, 'released') and obj.released:
-            m.state_event = 'close'
-            toSave = True
-        elif hasattr(obj, 'state') and obj.state == 'CLOSED':
-            m.state_event = 'close'
-            toSave = True
-        if toSave:
-            m.save()
-        return m
 
     def flush(self):
         logger = logging.getLogger(__name__)
@@ -151,7 +146,47 @@ class Project(Ressource):
         return self
 
 
-class User(Ressource):
+class ProjectMilestone(Resource):
+    def get(self):
+        if not self._item:
+            for m in self.manager.project.milestones.list(search=self._name):
+                if m.title == self._name:
+                    self._item = m
+                    break
+            if not self._item:
+                self.create()
+        return self._item
+
+    def create(self):
+        data = {'title': self._name}
+        self._item = self.manager.project.milestones.create(data)
+        self.logger.debug('Milestone {} created : #{}'.format(
+            self._name, self._item.id
+        ))
+        return self
+
+    def fillFromJiraSprint(self, sprint):
+        m = self.get()
+        if sprint.endDate and sprint.endDate != m.due_date:
+            m.due_date = sprint.endDate
+            self.toSave = True
+        if sprint.state == 'CLOSED' and m.state == 'active':
+            m.state_event = 'close'
+            self.toSave = True
+        return self.save()
+
+    def fillFromJiraVersion(self, version):
+        m = self.get()
+        if version.releaseDate and version.releaseDate != m.due_date:
+            m.due_date = version.releaseDate
+            self.toSave = True
+        if version.released and m.state == 'active':
+            m.state_event = 'close'
+            self.toSave = True
+        return self.save()
+
+
+class User(Resource):
     def get(self):
         """
         Find the user by his name
