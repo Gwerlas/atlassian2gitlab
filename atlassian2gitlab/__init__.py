@@ -209,8 +209,8 @@ class JiraManager(AtlassianManager):
         >>> manager = JiraManager(None, None, None, None, None, None, None)
         >>> manager.storyPoint_map[5]
         4
-        >>> manager.mapStoryPoints({'6': '4', 'blah': 'blah'})
-        >>> manager.storyPoint_map[6]
+        >>> manager.mapStoryPoints({'7': '4', 'blah': 'blah'})
+        >>> manager.storyPoint_map[7]
         4
         >>> 'blah' in manager.storyPoint_map
         False

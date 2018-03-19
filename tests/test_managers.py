@@ -1,8 +1,13 @@
 import atlassian2gitlab as a2g
 from atlassian2gitlab.exceptions import A2GException
 import logging
-import pytest
 from munch import munchify
+
+
+def fakeProject(mocker):
+    p = mocker.MagicMock()
+    p.milestones = mocker.MagicMock()
+    return p
 
 
 def test_gitlab_manager():
@@ -20,7 +25,7 @@ def test_gitlab_in_debug_mode():
 
 def test_project_manager():
     manager = a2g.Manager(None, None, 'fake/project')
-    assert manager.project._name == 'fake/project'
+    assert manager.project._repo == 'fake/project'
 
 
 def test_use_current_user_if_user_not_found(mocker):
@@ -34,7 +39,7 @@ def test_use_current_user_if_user_not_found(mocker):
     gl.user.username = 'current'
 
     user = manager.findUser('user')
-    assert user._name == 'current'
+    assert user._username == 'current'
     assert gl.auth.call_count == 1
 
 
@@ -47,24 +52,21 @@ def test_find_user(mocker):
     gl.users.list.return_value = ['me']
 
     user = manager.findUser('me')
-    assert user._name == 'me'
+    assert user._username == 'me'
 
 
-def test_find_existing_milestone():
-    project = munchify({
-        'milestones': {
-            'list': lambda search: [munchify({'title': search})]
-        }
-    })
+def test_find_existing_milestone(mocker):
+    project = fakeProject(mocker)
+    project.milestones.list.return_value = [munchify({'title': '1.0'})]
     manager = a2g.Manager(None, None, None)
     manager._project = project
 
-    assert manager.findMilestone('1.0').title == '1.0'
+    assert manager.findMilestone('1.0')._title == '1.0'
 
 
 def test_find_milestone():
     manager = a2g.Manager(None, None, None)
-    assert manager.findMilestone('2.0')._name == '2.0'
+    assert manager.findMilestone('2.0')._title == '2.0'
 
 
 def test_gitlab_upload(mocker):

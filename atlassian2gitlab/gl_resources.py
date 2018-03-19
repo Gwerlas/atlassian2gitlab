@@ -4,15 +4,13 @@ from atlassian2gitlab.exceptions import NotFoundException
 
 
 class Resource(object):
-    _name = None
     _item = None
     manager = None
     toSave = False
 
-    def __init__(self, name, manager):
+    def __init__(self, manager):
         self.logger = logging.getLogger(__name__)
         self.manager = manager
-        self._name = name
 
     def __getattr__(self, name):
         return getattr(self.get(), name)
@@ -36,8 +34,133 @@ class Resource(object):
         return self
 
 
+class Issue(Resource):
+    _data = {}
+
+    def __init__(self, manager):
+        Resource.__init__(self, manager)
+        self.project = manager.project
+
+    def save(self):
+        """
+        Create the Gitlab issue (update not yet supported)
+        """
+        if not self._item:
+            self._item = self.project.issues.create(
+                self._data,
+                sudo=self.owner.username)
+            self._data = {}
+            self.toSave = False
+        return self
+
+    def setData(self, k, v):
+        if not hasattr(self._item, k) or getattr(self._item, k) != v:
+            self._data[k] = v
+            self.toSave = True
+        return self
+
+    def setAssignee(self, username):
+        assignee = self.manager.findUser(username)
+        self.setData('assignee_ids', [assignee.id])
+
+    def getSprint(self, fields):
+        """
+        Parse Sprints customfield and format it
+
+        Returns:
+            jira.resources.Sprint
+        """
+        field = self.manager.getFieldId('Sprint')
+        sprints = getattr(fields, field) if hasattr(fields, field) else None
+        if sprints:
+            import re
+            m = re.search(r'id=(\d+),', sprints[-1])
+            id = m.group(1)
+            return self.manager.jira.sprint(id)
+        return None
+
+    def setMilestoneFromSprint(self, sprint):
+        milestone = self.manager.findMilestone(str(sprint))
+        milestone.fillFromJiraSprint(sprint)
+        self.setData('milestone_id', milestone.id)
+
+    def setMilestoneFromVersion(self, version):
+        milestone = self.manager.findMilestone(str(version))
+        milestone.fillFromJiraVersion(version)
+        self.setData('milestone_id', milestone.id)
+
+    def getWeight(self, number):
+        """
+        Return the appropriate issue weight for the given number
+
+        Search the given number in the Fibonaci suite, commonly used by SCRUM
+        teams. If the number is not in the convertion map, we use the value as
+        is, but limited at 9 (the max issue weight).
+
+        >>> from atlassian2gitlab import JiraManager
+        >>> manager = JiraManager(None, None, None, None, None, None, None)
+        >>> issue = Issue(manager)
+        >>> issue.getWeight(1)
+        1
+        >>> issue.getWeight(5)
+        4
+        >>> issue.getWeight(6)
+        6
+        >>> issue.getWeight(13)
+        6
+        >>> issue.getWeight(150)
+        9
+
+        Returns:
+            int
+        """
+        n = int(number)
+        v = self.manager.storyPoint_map.get(n, n)
+        return 9 if v > 9 else v
+
+    def setWeight(self, number):
+        self.setData('weight', self.getWeight(number))
+
+    def setOwner(self, username):
+        self.owner = self.manager.findUser(username)
+
+    def fillFromJira(self, jira_issue):
+        fields = jira_issue.fields
+        self.setData('created_at', fields.created)
+        self.setData('title', fields.summary)
+
+        converter = JiraNotationConverter(self.manager, jira_issue)
+
+        if fields.reporter:
+            self.setOwner(fields.reporter.name)
+
+        if fields.assignee:
+            self.setAssignee(fields.assignee.name)
+
+        if fields.description:
+            self.setData(
+                'description',
+                converter.toMarkdown(fields.description))
+
+        sprint = self.getSprint(fields)
+        if sprint:
+            self.setMilestoneFromSprint(sprint)
+        elif len(fields.fixVersions):
+            self.setMilestoneFromVersion(fields.fixVersions[-1])
+
+        spField = self.manager.getFieldId('Story Points')
+        if hasattr(fields, spField) and getattr(fields, spField):
+            self.setWeight(getattr(fields, spField))
+        return self.save()
+
+
 class Project(Resource):
     _users = {}
+    _repo = None
+
+    def __init__(self, repo, manager):
+        Resource.__init__(self, manager)
+        self._repo = repo
 
     def get(self):
         """
@@ -50,15 +173,15 @@ class Project(Resource):
             gitlab.v4.objects.Project
         """
         if not self._item:
-            search = self._name.split('/')[1]
+            search = self._repo.split('/')[1]
             for project in self.manager.gitlab.projects.list(search=search):
-                if project.path_with_namespace == self._name:
+                if project.path_with_namespace == self._repo:
                     self._item = project
                     return project
-            raise NotFoundException("Project {} not found".format(self._name))
+            raise NotFoundException("Project {} not found".format(self._repo))
         return self._item
 
-    def addIssue(self, issue):
+    def addIssue(self, jira_issue):
         """
         Create an issue from a Jira issue object
 
@@ -66,38 +189,11 @@ class Project(Resource):
             jira.resources.Issue
 
         Returns:
-            gitlab.v4.objects.Issue
+            atlassian2gitlab.gl_resources.Issue
         """
-        fields = issue.fields
-        data = {
-            'created_at': fields.created,
-            'title': fields.summary
-        }
-        converter = JiraNotationConverter(self.manager, issue)
-        owner = self.manager.findUser(fields.reporter.name)
-
-        if fields.assignee:
-            assignee = self.manager.findUser(fields.assignee.name)
-            data['assignee_ids'] = [assignee.id]
-
-        if fields.description:
-            data['description'] = converter.toMarkdown(fields.description)
-
-        sprint = self.manager.getIssueLastSprint(fields)
-        if sprint:
-            milestone = self.manager.findMilestone(str(sprint))
-            data['milestone_id'] = milestone.fillFromJiraSprint(sprint).id
-        elif len(fields.fixVersions):
-            version = fields.fixVersions[-1]
-            milestone = self.manager.findMilestone(str(version))
-            data['milestone_id'] = milestone.fillFromJiraVersion(version).id
-
-        spField = self.manager.getFieldId('Story Points')
-        if hasattr(fields, spField) and getattr(fields, spField):
-            sp = getattr(fields, spField)
-            data['weight'] = self.manager.getIssueWeight(sp)
-
-        return self.get().issues.create(data, sudo=owner.username)
+        issue = Issue(self.manager)
+        issue.fillFromJira(jira_issue)
+        return issue
 
     def flush(self):
         logger = logging.getLogger(__name__)
@@ -147,10 +243,14 @@ class Project(Resource):
 
 
 class ProjectMilestone(Resource):
+    def __init__(self, title, manager):
+        Resource.__init__(self, manager)
+        self._title = title
+
     def get(self):
         if not self._item:
-            for m in self.manager.project.milestones.list(search=self._name):
-                if m.title == self._name:
+            for m in self.manager.project.milestones.list(search=self._title):
+                if m.title == self._title:
                     self._item = m
                     break
             if not self._item:
@@ -158,10 +258,10 @@ class ProjectMilestone(Resource):
         return self._item
 
     def create(self):
-        data = {'title': self._name}
+        data = {'title': self._title}
         self._item = self.manager.project.milestones.create(data)
         self.logger.debug('Milestone {} created : #{}'.format(
-            self._name, self._item.id
+            self._title, self._item.id
         ))
         return self
 
@@ -187,6 +287,10 @@ class ProjectMilestone(Resource):
 
 
 class User(Resource):
+    def __init__(self, username, manager):
+        Resource.__init__(self, manager)
+        self._username = username
+
     def get(self):
         """
         Find the user by his name
@@ -198,14 +302,14 @@ class User(Resource):
             gitlab.v4.objects.User
         """
         if not self._item:
-            users = self.manager.gitlab.users.list(username=self._name)
+            users = self.manager.gitlab.users.list(username=self._username)
             if len(users) == 1:
                 self._item = users[0]
             else:
                 err = '{} users found matching {}'.format(
                     len(users),
-                    self._name)
+                    self._username)
                 logging.getLogger(__name__).debug(
-                    "No such user `%s'" % self._name)
+                    "No such user `%s'" % self._username)
                 raise NotFoundException(err)
         return self._item

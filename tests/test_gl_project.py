@@ -5,6 +5,12 @@ from atlassian2gitlab.gl_resources import Project
 from atlassian2gitlab.exceptions import A2GException
 
 
+def test_create_project_raise_exception():
+    project = Project(None, None)
+    with pytest.raises(NotImplementedError):
+        project.create()
+
+
 def test_raise_exception_if_project_not_found():
     import platform
     print('Version: {}'.format(platform.version()))
@@ -51,168 +57,9 @@ def test_get_project():
 
 
 def test_add_jira_issue(mocker):
-    issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'My title',
-        'reporter': {'name': 'john.doe'},
-        'assignee': {'name': 'john.doe'},
-        'description': 'My description',
-        'fixVersions': [],
-        'attachment': []
-    }})
-    manager = mocker.MagicMock()
-    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.getIssueLastSprint.return_value = None
-    manager.getFieldId.return_value = 'field1'
-    project = Project('fake/project', manager)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data, sudo: data
-        }
-    })
-
-    assert project.addIssue(issue) == {
-        'created_at': 'now',
-        'title': 'My title',
-        'assignee_ids': [1],
-        'description': 'My description'
-    }
-
-
-def test_add_jira_issue_with_version(mocker):
-    issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'My title',
-        'reporter': {'name': 'john.doe'},
-        'assignee': {'name': 'john.doe'},
-        'description': 'My description',
-        'fixVersions': [{}],
-        'attachment': []
-    }})
-    manager = mocker.MagicMock()
-    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.getIssueLastSprint.return_value = None
-    manager.getFieldId.return_value = 'field1'
-    milestone = mocker.MagicMock()
-    milestone.fillFromJiraVersion.return_value = milestone
-    milestone.id = 1
-    manager.findMilestone.return_value = milestone
-    project = Project('fake/project', manager)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data, sudo: data
-        }
-    })
-
-    assert project.addIssue(issue) == {
-        'created_at': 'now',
-        'title': 'My title',
-        'assignee_ids': [1],
-        'description': 'My description',
-        'milestone_id': 1
-    }
-
-
-def test_add_jira_issue_with_sprint(mocker):
-    issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'My title',
-        'reporter': {'name': 'john.doe'},
-        'assignee': {'name': 'john.doe'},
-        'description': 'My description',
-        'fixVersions': [],
-        'attachment': []
-    }})
-    manager = mocker.MagicMock()
-    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.getIssueLastSprint.return_value = 'Sprint 1'
-    manager.getFieldId.return_value = 'field1'
-    milestone = mocker.MagicMock()
-    milestone.fillFromJiraSprint.return_value = milestone
-    milestone.id = 1
-    manager.findMilestone.return_value = milestone
-    project = Project('fake/project', manager)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data, sudo: data
-        }
-    })
-
-    assert project.addIssue(issue) == {
-        'created_at': 'now',
-        'title': 'My title',
-        'assignee_ids': [1],
-        'description': 'My description',
-        'milestone_id': 1
-    }
-
-
-def test_add_jira_issue_with_both_version_and_sprint(mocker):
-    issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'My title',
-        'reporter': {'name': 'john.doe'},
-        'assignee': {'name': 'john.doe'},
-        'description': 'My description',
-        'fixVersions': [{}],
-        'attachment': []
-    }})
-    manager = mocker.MagicMock()
-    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.getIssueLastSprint.return_value = 'Sprint 1'
-    manager.getFieldId.return_value = 'field1'
-    milestone = mocker.MagicMock()
-    milestone.fillFromJiraSprint.return_value = milestone
-    milestone.id = 1
-    manager.findMilestone.return_value = milestone
-    project = Project('fake/project', manager)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data, sudo: data
-        }
-    })
-
-    assert project.addIssue(issue) == {
-        'created_at': 'now',
-        'title': 'My title',
-        'assignee_ids': [1],
-        'description': 'My description',
-        'milestone_id': 1
-    }
-    assert milestone.fillFromJiraVersion.call_count == 0
-
-
-def test_add_jira_issue_with_story_points(mocker):
-    issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'My title',
-        'reporter': {'name': 'john.doe'},
-        'assignee': {'name': 'john.doe'},
-        'description': 'My description',
-        'fixVersions': [],
-        'attachment': [],
-        'field1': 10.0
-    }})
-    manager = mocker.MagicMock()
-    manager.findUser.return_value = munchify({'id': 1, 'username': 'jdoe'})
-    manager.getIssueLastSprint.return_value = None
-    manager.getFieldId.return_value = 'field1'
-    manager.getIssueWeight.return_value = 9
-    project = Project('fake/project', manager)
-    project._item = munchify({
-        'issues': {
-            'create': lambda data, sudo: data
-        }
-    })
-
-    assert project.addIssue(issue) == {
-        'created_at': 'now',
-        'title': 'My title',
-        'assignee_ids': [1],
-        'description': 'My description',
-        'weight': 9
-    }
-    manager.getIssueWeight.assert_called_once_with(10.0)
+    project = Project(None, None)
+    patch = mocker.patch('atlassian2gitlab.gl_resources.Issue')
+    project.addIssue(object())
 
 
 def test_nothing_to_flush(caplog):
