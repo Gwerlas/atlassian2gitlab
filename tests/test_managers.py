@@ -11,25 +11,26 @@ def fakeProject(mocker):
 
 
 def test_gitlab_manager():
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     assert manager.gitlab.api_version == '4'
 
 
 def test_gitlab_in_debug_mode():
     a2g.debug = True
-    a2g.Manager(None, None, None, debug=True).gitlab
+    a2g.Manager().gitlab
     logger = logging.getLogger("requests.packages.urllib3")
     assert logging.getLogger().getEffectiveLevel() == logging.DEBUG
     assert logger.getEffectiveLevel() == logging.DEBUG
 
 
 def test_project_manager():
-    manager = a2g.Manager(None, None, 'fake/project')
+    a2g.gitlab_repo = 'fake/project'
+    manager = a2g.Manager()
     assert manager.project._repo == 'fake/project'
 
 
 def test_use_current_user_if_user_not_found(mocker):
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     gl = mocker.MagicMock()
     manager._gitlab = gl
 
@@ -44,7 +45,7 @@ def test_use_current_user_if_user_not_found(mocker):
 
 
 def test_find_user(mocker):
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     gl = mocker.MagicMock()
     manager._gitlab = gl
 
@@ -58,14 +59,14 @@ def test_find_user(mocker):
 def test_find_existing_milestone(mocker):
     project = fakeProject(mocker)
     project.milestones.list.return_value = [munchify({'title': '1.0'})]
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     manager._project = project
 
     assert manager.findMilestone('1.0')._title == '1.0'
 
 
 def test_find_milestone():
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     assert manager.findMilestone('2.0')._title == '2.0'
 
 
@@ -73,7 +74,7 @@ def test_gitlab_upload(mocker):
     project = munchify({
         'upload': lambda filename, filedata: 'Gitlab attachment'
     })
-    manager = a2g.Manager(None, None, None)
+    manager = a2g.Manager()
     manager._project = project
     attachment = mocker.MagicMock()
     attachment.id = '1'
@@ -85,14 +86,14 @@ def test_gitlab_upload(mocker):
 
 
 def test_jira_manager(mocker):
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     mock = mocker.patch('jira.JIRA')
     manager.jira
     mock.call_count == 1
 
 
 def test_no_jira_issues_to_copy(caplog, mocker):
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
@@ -106,7 +107,7 @@ def test_no_jira_issues_to_copy(caplog, mocker):
 
 
 def test_copy_jira_issues_in_failure(caplog, mocker):
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
@@ -127,7 +128,7 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
 
 
 def test_copy_jira_issues_partially_in_failure(caplog, mocker):
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     issue_one = munchify({'key': 'PRO-42', 'fields': {}})
     issue_two = munchify({'key': 'PRO-43', 'fields': {}})
     manager._jira = mocker.MagicMock()
@@ -149,7 +150,7 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
 
 
 def test_copy_jira_issues(caplog, mocker):
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     issue = munchify({'key': 'PRO-42', 'fields': {}})
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
@@ -168,7 +169,7 @@ def test_copy_jira_issues(caplog, mocker):
 
 
 def test_get_last_sprint_when_issue_has_none():
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     manager._jira = munchify({
         'fields': lambda: [{'name': 'Sprint', 'id': 'customfield_1'}],
     })
@@ -178,7 +179,7 @@ def test_get_last_sprint_when_issue_has_none():
 
 
 def test_get_last_isue_sprint():
-    manager = a2g.JiraManager(None, None, None, None, None, None, None)
+    manager = a2g.JiraManager()
     manager._jira = munchify({
         'fields': lambda: [{'name': 'Sprint', 'id': 'customfield_1'}],
         'sprint': lambda id: id

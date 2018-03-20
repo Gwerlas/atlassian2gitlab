@@ -9,8 +9,24 @@ import requests
 __version__ = 0.3
 
 
+debug = False
+gitlab_url = None
+gitlab_token = None
+gitlab_repo = None
+jira_url = None
+jira_key = None
+jira_username = None
+jira_password = None
 logger = logging.getLogger(__name__)
 session = requests.Session()
+storyPoint_map = {
+    5: 4,
+    8: 5,
+    13: 6,
+    21: 7,
+    34: 8,
+    55: 9
+}
 user_map = {}
 
 
@@ -21,30 +37,22 @@ class Manager(object):
     _milestones = {}
     _users = {}
 
-    def __init__(self, gitlab_url, gitlab_token, gitlab_repo,
-                 debug=False, ssl_verify=True):
-        self.debug = debug
-        self.ssl_verify = ssl_verify
-        self.gitlab_repo = gitlab_repo
-        self.gitlab_token = gitlab_token
-        self.gitlab_url = gitlab_url
-
     @property
     def gitlab(self):
         if not self._gitlab:
-            self._gitlab = Gitlab(self.gitlab_url,
-                                  private_token=self.gitlab_token,
-                                  ssl_verify=self.ssl_verify,
+            self._gitlab = Gitlab(gitlab_url,
+                                  private_token=gitlab_token,
+                                  ssl_verify=ssl_verify,
                                   api_version=4,
                                   session=session)
-            if self.debug:
+            if debug:
                 self._gitlab.enable_debug()
         return self._gitlab
 
     @property
     def project(self):
         if not self._project:
-            self._project = Project(self.gitlab_repo, self)
+            self._project = Project(gitlab_repo, self)
         return self._project
 
     def findUser(self, name):
@@ -110,37 +118,20 @@ class Manager(object):
         return self._attachments[id]
 
 
-class AtlassianManager(Manager):
-    def __init__(self, url, key, username, password, *args, **kwargs):
-        self.url = url
-        self.key = key
-        self.username = username
-        self.password = password
-        Manager.__init__(self, *args, **kwargs)
-
-
-class JiraManager(AtlassianManager):
+class JiraManager(Manager):
     """
     Manage issues
     """
     _fields = None
     _jira = None
-    storyPoint_map = {
-        5: 4,
-        8: 5,
-        13: 6,
-        21: 7,
-        34: 8,
-        55: 9
-    }
 
     @property
     def jira(self):
         if not self._jira:
             self._jira = jira.JIRA(
-                self.url,
-                options={'verify': self.ssl_verify},
-                basic_auth=(self.username, self.password))
+                jira_url,
+                options={'verify': ssl_verify},
+                basic_auth=(jira_username, jira_password))
         return self._jira
 
     def getFieldId(self, name):
@@ -157,7 +148,7 @@ class JiraManager(AtlassianManager):
         return self.jira.search_issues(jql, fields=', '.join(fields))
 
     def activeIssues(self):
-        jql = 'project={}'.format(self.key)
+        jql = 'project={}'.format(jira_key)
         jql += ' AND (resolution=Unresolved OR Sprint in openSprints())'
         return self.findIssues(jql)
 
@@ -200,28 +191,6 @@ class JiraManager(AtlassianManager):
 
         return self
 
-    def mapStoryPoints(self, dict):
-        """
-        Add story points mapping to the existing map
-
-        Configparser send DEFAULTSECT, so we have to ignore no numerical keys.
-
-        >>> manager = JiraManager(None, None, None, None, None, None, None)
-        >>> manager.storyPoint_map[5]
-        4
-        >>> manager.mapStoryPoints({'7': '4', 'blah': 'blah'})
-        >>> manager.storyPoint_map[7]
-        4
-        >>> 'blah' in manager.storyPoint_map
-        False
-        """
-        for k, v in dict.items():
-            if not k.isdigit():
-                continue
-            key = int(k)
-            value = int(v)
-            self.storyPoint_map[key] = value
-
     def getIssueWeight(self, number):
         """
         Return the appropriate issue weight for the given number
@@ -230,7 +199,7 @@ class JiraManager(AtlassianManager):
         teams. If the number is not in the convertion map, we use the value as
         is, but limited at 9 (the max issue weight).
 
-        >>> manager = JiraManager(None, None, None, None, None, None, None)
+        >>> manager = JiraManager()
         >>> manager.getIssueWeight(1)
         1
         >>> manager.getIssueWeight(5)
@@ -246,5 +215,5 @@ class JiraManager(AtlassianManager):
             int
         """
         n = int(number)
-        v = self.storyPoint_map.get(n, n)
+        v = storyPoint_map.get(n, n)
         return 9 if v > 9 else v

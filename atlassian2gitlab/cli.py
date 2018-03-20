@@ -1,28 +1,106 @@
+import atlassian2gitlab as a2g
+
+
 class Config(object):
+    """
+    Wrap the config parser to set up the module
+
+    >>> import atlassian2gitlab as a2g
+    >>> import configparser
+    >>> config = configparser.ConfigParser()
+    >>> config['DEFAULT'] = {'debug': 'on'}
+    >>> config['gitlab'] = {
+    ...     'url': 'http://my-gitlab.local',
+    ...     'token': 'get-it-from-your-profile',
+    ...     'repo': 'fake/project'}
+    >>> config['jira'] = {
+    ...     'key': 'PRO',
+    ...     'url': 'http://my-jira.local',
+    ...     'username': 'jdoe',
+    ...     'password': 'secret'}
+    >>> config['story_points'] = {'5': '4'}
+    >>> config['user_map'] = {'jira': 'gitlab'}
+    >>> c = Config(config)
+    >>> a2g.debug
+    True
+    >>> a2g.ssl_verify
+    True
+    >>> a2g.gitlab_url
+    'http://my-gitlab.local'
+    >>> a2g.gitlab_token
+    'get-it-from-your-profile'
+    >>> a2g.gitlab_repo
+    'fake/project'
+    >>> a2g.jira_key
+    'PRO'
+    >>> a2g.jira_url
+    'http://my-jira.local'
+    >>> a2g.jira_username
+    'jdoe'
+    >>> a2g.jira_password
+    'secret'
+
+    If a section named `user_map` is present, we use it as a map for
+    user conversion between the Atlassian suite and Gitlab.
+
+    >>> a2g.user_map['jira']
+    'gitlab'
+
+    If a section named `story_points` is present, we use it as a map for
+    conversions in Gitlab issue weight.
+    Configparser send DEFAULTSECT, so we have to ignore no numerical keys.
+
+    >>> 'debug' in a2g.storyPoint_map
+    False
+    >>> 'key' in a2g.storyPoint_map
+    False
+    >>> a2g.storyPoint_map[5]
+    4
+    """
     def __init__(self, config):
-        self.ssl_verify = config.getboolean('ssl_verify', fallback=True)
+        defaults = config['DEFAULT']
+        a2g.debug = defaults.getboolean('debug', fallback=False)
+        a2g.ssl_verify = defaults.getboolean('ssl_verify', fallback=True)
+        if 'story_points' in config:
+            self.mapStoryPoints(config['story_points'])
+        if 'user_map' in config:
+            a2g.user_map = config['user_map']
 
+        gl_config = config['gitlab']
+        a2g.gitlab_token = gl_config.get('token')
+        a2g.gitlab_url = gl_config.get('url', fallback='https://gitlab.com/')
+        a2g.gitlab_repo = gl_config.get('repo')
 
-class AtlassianConfig(Config):
-    def __init__(self, config):
-        Config.__init__(self, config)
-        self.username = config['username']
-        self.password = config['password']
+        ji_config = config['jira']
+        a2g.jira_url = ji_config.get('url')
+        a2g.jira_key = ji_config.get('key')
+        a2g.jira_username = ji_config.get('username')
+        a2g.jira_password = ji_config.get('password')
 
+    def mapStoryPoints(self, dict):
+        """
+        Add/replace values in a2g.storyPoint_map dict
 
-class JiraConfig(AtlassianConfig):
-    def __init__(self, config):
-        AtlassianConfig.__init__(self, config)
-        self.url = config.get('url', fallback='https://jira.atlassian.com')
-        self.key = config['key']
-
-
-class GitlabConfig(Config):
-    def __init__(self, config):
-        Config.__init__(self, config)
-        self.token = config['token']
-        self.url = config.get('url', fallback='https://gitlab.com/')
-        self.repo = config['repo']
+        >>> import atlassian2gitlab as a2g
+        >>> import configparser
+        >>> config = configparser.ConfigParser()
+        >>> config['DEFAULT'] = {}
+        >>> config['gitlab'] = {}
+        >>> config['jira'] = {}
+        >>> config['story_points'] = {'5': '4'}
+        >>> c = Config(config)
+        >>> c.mapStoryPoints({'7': '4', 'blah': 'blah'})
+        >>> a2g.storyPoint_map[7]
+        4
+        >>> 'blah' in a2g.storyPoint_map
+        False
+        """
+        for k, v in dict.items():
+            if not k.isdigit():
+                continue
+            key = int(k)
+            value = int(v)
+            a2g.storyPoint_map[key] = value
 
 
 class CLI(object):
@@ -54,8 +132,9 @@ class CLI(object):
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
 
-    def _argparse(self, description):
+    def initConfig(self, description):
         import argparse
+        import configparser
         parser = argparse.ArgumentParser(description=description)
         parser.add_argument(
             '-c', '--config',
@@ -71,33 +150,10 @@ class CLI(object):
             help='Show version and exit',
             action='version',
             version=self.version)
-        return parser
-
-    def _configparse(self, file):
-        import configparser
+        args = parser.parse_args()
         config = configparser.ConfigParser()
-        config.read(file)
-        return config
-
-    @property
-    def flushConfig(self):
-        args = self._argparse('Flush your Gitlab').parse_args()
-        config = self._configparse(args.config)
-        args.gitlab = GitlabConfig(config['gitlab'])
-        return args
-
-    @property
-    def migrationConfig(self):
-        description = 'Migrate from the Atlassian suite to Gitlab'
-        args = self._argparse(description).parse_args()
-        config = self._configparse(args.config)
-        args.gitlab = GitlabConfig(config['gitlab'])
-        args.jira = JiraConfig(config['jira'])
-        if 'user_map' in config:
-            args.user_map = config['user_map']
-        if 'story_points' in config:
-            args.story_points = config['story_points']
-        return args
+        config.read(args.config)
+        Config(config)
 
     @property
     def version(self):

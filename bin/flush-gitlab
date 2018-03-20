@@ -4,13 +4,5 @@ from atlassian2gitlab.cli import CLI
 
 
 if __name__ == "__main__":
-    args = CLI().flushConfig
-
-    manager = a2g.Manager(
-        gitlab_url=args.gitlab.url,
-        gitlab_token=args.gitlab.token,
-        gitlab_repo=args.gitlab.repo,
-        debug=args.debug,
-        ssl_verify=args.gitlab.ssl_verify
-    )
-    manager.project.flush()
+    CLI().initConfig('Flush your Gitlab')
+    a2g.Manager().project.flush()

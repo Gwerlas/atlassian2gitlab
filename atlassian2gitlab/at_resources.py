@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import re
 
 
@@ -48,10 +46,7 @@ class AtlassianNotationConverter(object):
         Translate lists from Atlassian notation to Markdown
 
         >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager(
-        ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
-        ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
-        ... )
+        >>> manager = JiraManager()
         >>> converter = AtlassianNotationConverter(manager)
 
         >>> match = re.match(r'^([\*\#]+) ', '* ')
@@ -85,10 +80,7 @@ class AtlassianNotationConverter(object):
         Translate lists from Atlassian notation to Markdown
 
         >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager(
-        ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
-        ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
-        ... )
+        >>> manager = JiraManager()
         >>> converter = AtlassianNotationConverter(manager)
 
         >>> match = re.match(r'(.*)', 'blah', flags=re.DOTALL)
@@ -114,10 +106,7 @@ class AtlassianNotationConverter(object):
         Translate Atlassian Notation to Markdown
 
         >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager(
-        ...     'http://my-gitlab.tld', 'gitlab-token', 'gitlab-repo',
-        ...     'http://my-jira.tld', 'KEY', 'login', 'pass'
-        ... )
+        >>> manager = JiraManager()
         >>> converter = AtlassianNotationConverter(manager)
 
         >>> converter.toMarkdown('----')

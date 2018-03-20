@@ -4,24 +4,5 @@ from atlassian2gitlab.cli import CLI
 
 
 if __name__ == "__main__":
-    args = CLI().migrationConfig
-
-    manager = a2g.JiraManager(
-        args.jira.url,
-        args.jira.key,
-        args.jira.username,
-        args.jira.password,
-        gitlab_url=args.gitlab.url,
-        gitlab_token=args.gitlab.token,
-        gitlab_repo=args.gitlab.repo,
-        debug=args.debug,
-        ssl_verify=args.gitlab.ssl_verify
-    )
-
-    if 'user_map' in args:
-        a2g.user_map = args.user_map
-
-    if 'story_points' in args:
-        manager.mapStoryPoints(args.story_points)
-
-    manager.cp()
+    CLI().initConfig('Migrate from the Atlassian suite to Gitlab')
+    a2g.JiraManager().cp()

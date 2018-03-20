@@ -1,4 +1,5 @@
 import logging
+import atlassian2gitlab as a2g
 from atlassian2gitlab.at_resources import JiraNotationConverter
 from atlassian2gitlab.exceptions import NotFoundException
 
@@ -98,7 +99,7 @@ class Issue(Resource):
         is, but limited at 9 (the max issue weight).
 
         >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager(None, None, None, None, None, None, None)
+        >>> manager = JiraManager()
         >>> issue = Issue(manager)
         >>> issue.getWeight(1)
         1
@@ -115,7 +116,7 @@ class Issue(Resource):
             int
         """
         n = int(number)
-        v = self.manager.storyPoint_map.get(n, n)
+        v = a2g.storyPoint_map.get(n, n)
         return 9 if v > 9 else v
 
     def setWeight(self, number):
