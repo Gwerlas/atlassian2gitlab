@@ -1,17 +1,16 @@
 import logging
 import atlassian2gitlab as a2g
-from atlassian2gitlab.at_resources import JiraNotationConverter
+from atlassian2gitlab import managers
 from atlassian2gitlab.exceptions import NotFoundException
 
 
 class Resource(object):
     _item = None
-    manager = None
     toSave = False
 
-    def __init__(self, manager):
-        self.logger = logging.getLogger(__name__)
-        self.manager = manager
+    def __init__(self):
+        name = '.'.join((self.__module__, self.__class__.__name__))
+        self.logger = logging.getLogger(name)
 
     def __getattr__(self, name):
         return getattr(self.get(), name)
@@ -38,9 +37,9 @@ class Resource(object):
 class Issue(Resource):
     _data = {}
 
-    def __init__(self, manager):
-        Resource.__init__(self, manager)
-        self.project = manager.project
+    def __init__(self):
+        Resource.__init__(self)
+        self.project = managers.GitlabManager().project
 
     def save(self):
         """
@@ -61,7 +60,7 @@ class Issue(Resource):
         return self
 
     def setAssignee(self, username):
-        assignee = self.manager.findUser(username)
+        assignee = managers.GitlabManager().findUser(username)
         self.setData('assignee_ids', [assignee.id])
 
     def getSprint(self, fields):
@@ -71,22 +70,23 @@ class Issue(Resource):
         Returns:
             jira.resources.Sprint
         """
-        field = self.manager.getFieldId('Sprint')
+        manager = managers.JiraManager()
+        field = manager.getFieldId('Sprint')
         sprints = getattr(fields, field) if hasattr(fields, field) else None
         if sprints:
             import re
             m = re.search(r'id=(\d+),', sprints[-1])
             id = m.group(1)
-            return self.manager.jira.sprint(id)
+            return manager.jira.sprint(id)
         return None
 
     def setMilestoneFromSprint(self, sprint):
-        milestone = self.manager.findMilestone(str(sprint))
+        milestone = managers.GitlabManager().findMilestone(str(sprint))
         milestone.fillFromJiraSprint(sprint)
         self.setData('milestone_id', milestone.id)
 
     def setMilestoneFromVersion(self, version):
-        milestone = self.manager.findMilestone(str(version))
+        milestone = managers.GitlabManager().findMilestone(str(version))
         milestone.fillFromJiraVersion(version)
         self.setData('milestone_id', milestone.id)
 
@@ -98,9 +98,8 @@ class Issue(Resource):
         teams. If the number is not in the convertion map, we use the value as
         is, but limited at 9 (the max issue weight).
 
-        >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager()
-        >>> issue = Issue(manager)
+        >>> from atlassian2gitlab.managers import GitlabManager
+        >>> issue = Issue()
         >>> issue.getWeight(1)
         1
         >>> issue.getWeight(5)
@@ -123,14 +122,16 @@ class Issue(Resource):
         self.setData('weight', self.getWeight(number))
 
     def setOwner(self, username):
-        self.owner = self.manager.findUser(username)
+        self.owner = managers.GitlabManager().findUser(username)
 
     def fillFromJira(self, jira_issue):
+        from atlassian2gitlab.at_resources import JiraNotationConverter
+        manager = managers.JiraManager()
         fields = jira_issue.fields
         self.setData('created_at', fields.created)
         self.setData('title', fields.summary)
 
-        converter = JiraNotationConverter(self.manager, jira_issue)
+        converter = JiraNotationConverter(jira_issue)
 
         if fields.reporter:
             self.setOwner(fields.reporter.name)
@@ -149,7 +150,7 @@ class Issue(Resource):
         elif len(fields.fixVersions):
             self.setMilestoneFromVersion(fields.fixVersions[-1])
 
-        spField = self.manager.getFieldId('Story Points')
+        spField = manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
             self.setWeight(getattr(fields, spField))
         return self.save()
@@ -159,8 +160,8 @@ class Project(Resource):
     _users = {}
     _repo = None
 
-    def __init__(self, repo, manager):
-        Resource.__init__(self, manager)
+    def __init__(self, repo):
+        Resource.__init__(self)
         self._repo = repo
 
     def get(self):
@@ -175,7 +176,9 @@ class Project(Resource):
         """
         if not self._item:
             search = self._repo.split('/')[1]
-            for project in self.manager.gitlab.projects.list(search=search):
+            projects = managers.GitlabManager().gitlab.projects.list(
+                search=search)
+            for project in projects:
                 if project.path_with_namespace == self._repo:
                     self._item = project
                     return project
@@ -192,7 +195,7 @@ class Project(Resource):
         Returns:
             atlassian2gitlab.gl_resources.Issue
         """
-        issue = Issue(self.manager)
+        issue = Issue()
         issue.fillFromJira(jira_issue)
         return issue
 
@@ -244,13 +247,15 @@ class Project(Resource):
 
 
 class ProjectMilestone(Resource):
-    def __init__(self, title, manager):
-        Resource.__init__(self, manager)
+    def __init__(self, title):
+        Resource.__init__(self)
         self._title = title
 
     def get(self):
         if not self._item:
-            for m in self.manager.project.milestones.list(search=self._title):
+            milestones = managers.GitlabManager().project.milestones.list(
+                search=self._title)
+            for m in milestones:
                 if m.title == self._title:
                     self._item = m
                     break
@@ -260,7 +265,7 @@ class ProjectMilestone(Resource):
 
     def create(self):
         data = {'title': self._title}
-        self._item = self.manager.project.milestones.create(data)
+        self._item = managers.GitlabManager().project.milestones.create(data)
         self.logger.debug('Milestone {} created : #{}'.format(
             self._title, self._item.id
         ))
@@ -288,8 +293,8 @@ class ProjectMilestone(Resource):
 
 
 class User(Resource):
-    def __init__(self, username, manager):
-        Resource.__init__(self, manager)
+    def __init__(self, username):
+        Resource.__init__(self)
         self._username = username
 
     def get(self):
@@ -303,7 +308,8 @@ class User(Resource):
             gitlab.v4.objects.User
         """
         if not self._item:
-            users = self.manager.gitlab.users.list(username=self._username)
+            users = managers.GitlabManager().gitlab.users.list(
+                username=self._username)
             if len(users) == 1:
                 self._item = users[0]
             else:

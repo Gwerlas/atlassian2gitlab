@@ -1,8 +1,7 @@
 #!/usr/bin/env python
-import atlassian2gitlab as a2g
-from atlassian2gitlab.cli import CLI
+from atlassian2gitlab import managers, cli
 
 
 if __name__ == "__main__":
-    CLI().initConfig('Flush your Gitlab')
-    a2g.Manager().project.flush()
+    cli.CLI().initConfig('Flush your Gitlab')
+    managers.GitlabManager().project.flush()

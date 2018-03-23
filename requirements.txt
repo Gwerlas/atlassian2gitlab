@@ -1,4 +1,6 @@
 colorlog
 configparser
+deprecation
 jira
 python-gitlab
+singleton-decorator

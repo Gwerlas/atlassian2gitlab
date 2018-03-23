@@ -15,7 +15,8 @@ class fakeGlMilestone(object):
 
 
 def fakeManager(mocker):
-    mgr = mocker.MagicMock()
+    mock = mocker.patch('atlassian2gitlab.managers.GitlabManager')
+    mgr = mock.return_value
     mgr.project = mocker.MagicMock()
     mgr.project.milestones = mocker.MagicMock()
     return mgr
@@ -25,7 +26,7 @@ def test_get_milestone(mocker):
     mgr = fakeManager(mocker)
     mgr.project.milestones.list.return_value = [fakeGlMilestone()]
 
-    mi = ProjectMilestone('1.0', manager=mgr)
+    mi = ProjectMilestone('1.0')
     mocker.spy(mi, 'create')
 
     assert mi.get().id == 1
@@ -37,7 +38,7 @@ def test_create_on_get_missing_milestone(mocker):
     mgr.project.milestones.list.return_value = []
     mgr.project.milestones.create.return_value = fakeGlMilestone()
 
-    mi = ProjectMilestone('1.0', manager=mgr)
+    mi = ProjectMilestone('1.0')
     mocker.spy(mi, 'create')
 
     assert mi.get().id == 1
@@ -46,7 +47,7 @@ def test_create_on_get_missing_milestone(mocker):
 
 def test_fill_milestone_from_jira_sprint(mocker):
     mgr = fakeManager(mocker)
-    mi = ProjectMilestone('1.0', manager=mgr)
+    mi = ProjectMilestone('1.0')
     mi._item = fakeGlMilestone()
 
     sprint = munchify({'endDate': 'now', 'state': 'CLOSED'})
@@ -62,7 +63,7 @@ def test_fill_milestone_from_jira_sprint(mocker):
 
 def test_fill_milestone_from_jira_version(mocker):
     mgr = fakeManager(mocker)
-    mi = ProjectMilestone('1.0', manager=mgr)
+    mi = ProjectMilestone('1.0')
     mi._item = fakeGlMilestone()
 
     version = munchify({'releaseDate': 'now', 'released': True})

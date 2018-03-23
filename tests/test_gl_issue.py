@@ -3,11 +3,18 @@ from munch import munchify
 from atlassian2gitlab.gl_resources import Issue
 
 
-def fakeManager(mocker):
-    mgr = mocker.MagicMock()
-    mgr.jira = mocker.MagicMock()
+def fakeGitlabManager(mocker):
+    mock = mocker.patch('atlassian2gitlab.managers.GitlabManager')
+    mgr = mock.return_value
     mgr.project = mocker.MagicMock()
     mgr.project.issues = mocker.MagicMock()
+    return mgr
+
+
+def fakeJiraManager(mocker):
+    mock = mocker.patch('atlassian2gitlab.managers.JiraManager')
+    mgr = mock.return_value
+    mgr.jira = mocker.MagicMock()
     return mgr
 
 
@@ -22,16 +29,15 @@ class fakeUser(object):
         self.username = name
 
 
-def test_get_issue_raise_exception(mocker):
-    issue = Issue(fakeManager(mocker))
+def test_get_issue_raise_exception():
     with pytest.raises(NotImplementedError):
-        issue.get()
+        Issue().get()
 
 
 def test_create(mocker):
-    mgr = fakeManager(mocker)
+    mgr = fakeGitlabManager(mocker)
 
-    issue = Issue(mgr)
+    issue = Issue()
     issue.owner = mocker.MagicMock()
     issue.owner.username = 'jdoe'
 
@@ -45,30 +51,30 @@ def test_create(mocker):
 
 
 def test_get_no_sprint(mocker):
-    mgr = fakeManager(mocker)
+    mgr = fakeJiraManager(mocker)
     mgr.getFieldId.return_value = 'customfield_10001'
 
     jira_fields = munchify({})
-    issue = Issue(mgr)
+    issue = Issue()
 
     assert issue.getSprint(jira_fields) is None
 
 
 def test_get_sprint(mocker):
-    mgr = fakeManager(mocker)
+    mgr = fakeJiraManager(mocker)
     mgr.getFieldId.return_value = 'customfield_10001'
     mgr.jira.sprint.return_value = 'Sprint 1'
 
     jira_fields = munchify({'customfield_10001': ['id=20,']})
-    issue = Issue(mgr)
+    issue = Issue()
 
     assert issue.getSprint(jira_fields) == 'Sprint 1'
     mgr.jira.sprint.assert_called_once_with('20')
 
 
 def test_set_milestone_from_sprint(mocker):
-    mgr = fakeManager(mocker)
-    issue = Issue(mgr)
+    mgr = fakeGitlabManager(mocker)
+    issue = Issue()
     milestone = mocker.MagicMock()
     mgr.findMilestone.return_value = milestone
 
@@ -79,8 +85,8 @@ def test_set_milestone_from_sprint(mocker):
 
 
 def test_set_milestone_from_version(mocker):
-    mgr = fakeManager(mocker)
-    issue = Issue(mgr)
+    mgr = fakeGitlabManager(mocker)
+    issue = Issue()
     milestone = mocker.MagicMock()
     mgr.findMilestone.return_value = milestone
 
@@ -91,7 +97,7 @@ def test_set_milestone_from_version(mocker):
 
 
 def test_set_weight(mocker):
-    issue = Issue(fakeManager(mocker))
+    issue = Issue()
 
     mocker.patch.object(issue, 'getWeight')
     mocker.patch.object(issue, 'setData')
@@ -105,8 +111,8 @@ def test_set_weight(mocker):
 
 
 def test_set_owner(mocker):
-    mgr = fakeManager(mocker)
-    issue = Issue(mgr)
+    mgr = fakeGitlabManager(mocker)
+    issue = Issue()
     mgr.findUser.return_value = 'John Doe'
 
     issue.setOwner('jdoe')
@@ -116,9 +122,9 @@ def test_set_owner(mocker):
 
 
 def test_create_from_jira_issue_with_sprint(mocker):
-    mgr = fakeManager(mocker)
+    mgr = fakeJiraManager(mocker)
     user = fakeUser()
-    issue = Issue(mgr)
+    issue = Issue()
 
     jira_issue = munchify({'fields': {
         'created': 'now',
@@ -134,7 +140,7 @@ def test_create_from_jira_issue_with_sprint(mocker):
     mocker.patch.object(issue, 'setMilestoneFromSprint')
     mocker.patch.object(issue, 'save')
 
-    mgr.findUser.return_value = user
+    fakeGitlabManager(mocker).findUser.return_value = user
     mgr.getFieldId.return_value = 'customfield_10001'
     issue.getSprint.return_value = 'Sprint 1'
 
@@ -147,9 +153,9 @@ def test_create_from_jira_issue_with_sprint(mocker):
 
 
 def test_create_from_jira_issue_with_version(mocker):
-    mgr = fakeManager(mocker)
+    mgr = fakeJiraManager(mocker)
     user = fakeUser()
-    issue = Issue(mgr)
+    issue = Issue()
 
     jira_issue = munchify({'fields': {
         'created': 'now',
@@ -166,7 +172,7 @@ def test_create_from_jira_issue_with_version(mocker):
     mocker.patch.object(issue, 'setMilestoneFromVersion')
     mocker.patch.object(issue, 'save')
 
-    mgr.findUser.return_value = user
+    fakeGitlabManager(mocker).findUser.return_value = user
     mgr.getFieldId.return_value = 'customfield_10001'
     issue.getSprint.return_value = None
 

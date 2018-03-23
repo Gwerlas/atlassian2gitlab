@@ -5,73 +5,76 @@ from atlassian2gitlab.gl_resources import Project
 from atlassian2gitlab.exceptions import A2GException
 
 
+def fakeManager(mocker):
+    mock = mocker.patch('atlassian2gitlab.managers.GitlabManager')
+    mgr = mock.return_value
+    mgr.gitlab = mocker.MagicMock()
+    mgr.gitlab.projects = mocker.MagicMock()
+    return mgr
+
+
 def test_create_project_raise_exception():
-    project = Project(None, None)
+    project = Project(None)
     with pytest.raises(NotImplementedError):
         project.create()
 
 
-def test_raise_exception_if_project_not_found():
-    import platform
-    print('Version: {}'.format(platform.version()))
-    manager = munchify({'gitlab': {
-        'projects': {
-            'list': lambda search=None: []
-        }
-    }})
-    project = Project('fake/name', manager)
+def test_raise_exception_if_project_not_found(mocker):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = []
+    project = Project('fake/name')
 
     with pytest.raises(A2GException):
         project.get()
 
 
-def test_raise_exception_if_other_projects_found():
-    manager = munchify({'gitlab': {
-        'projects': {
-            'list': lambda search=None: munchify([{'path_with_namespace':
-                                                   'fake/project'}])
-        }
-    }})
-    project = Project('fake/name', manager)
+def test_raise_exception_if_other_projects_found(mocker):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = munchify(
+        [{'path_with_namespace': 'fake/project'}])
+    project = Project('fake/name')
 
     with pytest.raises(A2GException):
         project.get()
 
 
 def test_return_cached_project():
-    project = Project('fake/name', None)
+    project = Project('fake/name')
     fake = munchify({'path_with_namespace': 'fake/project'})
     project._item = fake
 
     assert project.get() == fake
 
 
-def test_get_project():
-    manager = munchify({'gitlab': {'projects': {
-        'list': lambda search=None: munchify([{'path_with_namespace':
-                                             'fake/project'}])
-    }}})
-    project = Project('fake/project', manager)
+def test_get_project(mocker):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
+    project = Project('fake/project')
 
     assert project.get().path_with_namespace == 'fake/project'
 
 
 def test_add_jira_issue(mocker):
-    project = Project(None, None)
-    patch = mocker.patch('atlassian2gitlab.gl_resources.Issue')
-    project.addIssue(object())
+    project = Project(None)
+    mock = mocker.patch('atlassian2gitlab.gl_resources.Issue')
+    issue = mock.return_value
+    jira_issue = object()
+
+    project.addIssue(jira_issue)
+
+    issue.fillFromJira.assert_called_once_with(jira_issue)
 
 
-def test_nothing_to_flush(caplog):
-    project = Project('fake/project', object())
+def test_nothing_to_flush(caplog, mocker):
+    project = Project('fake/project')
     project._item = munchify({
         'issues': {
             'list': lambda all: []
         },
         'milestones': {
             'list': lambda all: []
-        }
-    })
+        }})
     project.flush()
     assert caplog.record_tuples == [
         ('atlassian2gitlab.gl_resources', logging.INFO, 'Nothing to do')
@@ -79,7 +82,7 @@ def test_nothing_to_flush(caplog):
 
 
 def test_flush_issues_in_complete_failure(mocker, caplog):
-    project = Project('fake/project', object())
+    project = Project('fake/project')
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
     issue.delete.side_effect = Exception('Fail !')
@@ -101,7 +104,7 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
 
 
 def test_flush_issues_with_failure(mocker, caplog):
-    project = Project('fake/project', object())
+    project = Project('fake/project')
     issue_one = munchify({'id': 1})
     issue_one.delete = mocker.stub(name="issue_one")
     issue_one.delete.side_effect = Exception('Fail !')
@@ -127,7 +130,7 @@ def test_flush_issues_with_failure(mocker, caplog):
 
 
 def test_flush_milestones_in_complete_failure(mocker, caplog):
-    project = Project('fake/project', object())
+    project = Project('fake/project')
     milestone = munchify({'title': 'Sprint 1'})
     milestone.delete = mocker.stub(name="issue")
     milestone.delete.side_effect = Exception('Fail !')
@@ -150,7 +153,7 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
 
 
 def test_flush_milestones_with_failure(mocker, caplog):
-    project = Project('fake/project', object())
+    project = Project('fake/project')
     milestone_one = munchify({'title': 'Sprint 1'})
     milestone_one.delete = mocker.stub(name="milestone_one")
     milestone_one.delete.side_effect = Exception('Fail !')
@@ -176,7 +179,7 @@ def test_flush_milestones_with_failure(mocker, caplog):
 
 
 def test_flush(mocker, caplog):
-    project = Project('fake/project', object())
+    project = Project('fake/project')
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
     milestone = munchify({'title': 'Sprint 1'})

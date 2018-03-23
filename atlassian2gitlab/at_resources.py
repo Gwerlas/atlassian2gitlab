@@ -1,16 +1,10 @@
+from atlassian2gitlab import managers
 import re
 
 
 class AtlassianNotationConverter(object):
     _attachments = []
     _forLater = {}
-
-    def __init__(self, manager):
-        """
-        Args:
-            atlassian2gitlab.AtlassianManager
-        """
-        self.manager = manager
 
     def _attachmentsToMarkdown(self, match):
         """
@@ -21,7 +15,7 @@ class AtlassianNotationConverter(object):
         """
         for a in self._attachments:
             if a.filename == match.group(1):
-                return self.manager.attachFile(a)['markdown']
+                return managers.GitlabManager().attachFile(a)['markdown']
         return ''
 
     def _headingsToMarkdown(self, match):
@@ -30,7 +24,7 @@ class AtlassianNotationConverter(object):
     def _linksToMarkdown(self, match):
         m = re.match('~', match.group(1))
         if m:
-            user = self.manager.findUser(match.group(1)[1:])
+            user = managers.GitlabManager().findUser(match.group(1)[1:])
             return '@{}'.format(user.username)
         m = re.match(r'^(.*?)\|([a-z]+?://.*?)$', match.group(1))
         if m:
@@ -45,10 +39,7 @@ class AtlassianNotationConverter(object):
         """
         Translate lists from Atlassian notation to Markdown
 
-        >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager()
-        >>> converter = AtlassianNotationConverter(manager)
-
+        >>> converter = AtlassianNotationConverter()
         >>> match = re.match(r'^([\*\#]+) ', '* ')
         >>> converter._listsToMarkdown(match)
         '\\n- '
@@ -79,14 +70,10 @@ class AtlassianNotationConverter(object):
         """
         Translate lists from Atlassian notation to Markdown
 
-        >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager()
-        >>> converter = AtlassianNotationConverter(manager)
-
+        >>> converter = AtlassianNotationConverter()
         >>> match = re.match(r'(.*)', 'blah', flags=re.DOTALL)
         >>> converter._quotesToMarkdown(match)
         '\\n> blah'
-
         >>> match = re.match(r'(.*)', 'blah\\nblah', flags=re.DOTALL)
         >>> converter._quotesToMarkdown(match)
         '\\n> blah\\n> blah'
@@ -105,10 +92,9 @@ class AtlassianNotationConverter(object):
         """
         Translate Atlassian Notation to Markdown
 
-        >>> from atlassian2gitlab import JiraManager
-        >>> manager = JiraManager()
-        >>> converter = AtlassianNotationConverter(manager)
-
+        >>> converter = AtlassianNotationConverter()
+        >>> converter.toMarkdown('Blah\\r\\nBlah')
+        'Blah  \\nBlah'
         >>> converter.toMarkdown('----')
         '---'
         >>> converter.toMarkdown('h1. Biggest')
@@ -255,7 +241,7 @@ class AtlassianNotationConverter(object):
 
 
 class JiraNotationConverter(AtlassianNotationConverter):
-    def __init__(self, manager, issue):
-        AtlassianNotationConverter.__init__(self, manager)
+    def __init__(self, issue):
+        AtlassianNotationConverter.__init__(self)
         if hasattr(issue.fields, 'attachment'):
             self._attachments = issue.fields.attachment
