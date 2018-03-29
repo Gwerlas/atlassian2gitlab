@@ -3,5 +3,5 @@ from atlassian2gitlab import managers, cli
 
 
 if __name__ == "__main__":
-    cli.CLI().initConfig('Migrate from the Atlassian suite to Gitlab')
+    cli.configure('Migrate from the Atlassian suite to Gitlab')
     managers.JiraManager().cp()

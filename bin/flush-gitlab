@@ -3,5 +3,5 @@ from atlassian2gitlab import managers, cli
 
 
 if __name__ == "__main__":
-    cli.CLI().initConfig('Flush your Gitlab')
+    cli.configure('Flush your Gitlab')
     managers.GitlabManager().project.flush()

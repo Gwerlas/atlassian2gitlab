@@ -59,7 +59,9 @@ class Config(object):
     """
     def __init__(self, config):
         defaults = config['DEFAULT']
-        a2g.debug = defaults.getboolean('debug', fallback=False)
+        debug = defaults.getboolean('debug', fallback=False)
+        if debug:
+            a2g.debug = True
         a2g.ssl_verify = defaults.getboolean('ssl_verify', fallback=True)
         if 'story_points' in config:
             self.mapStoryPoints(config['story_points'])
@@ -103,59 +105,50 @@ class Config(object):
             a2g.storyPoint_map[key] = value
 
 
-class CLI(object):
-    """Read and parse commandline arguments"""
-    def __init__(self):
-        self._configure_logger()
+def configure(description):
+    from colorlog import ColoredFormatter
+    import logging
 
-    def _configure_logger(self):
-        import logging
-        from colorlog import ColoredFormatter
+    formatter = ColoredFormatter(
+        "%(log_color)s%(levelname)-8s %(name)-14s %(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+            'DEBUG':    'cyan',
+            'INFO':     'green',
+            'WARNING':  'yellow',
+            'ERROR':    'red',
+            'CRITICAL': 'red,bg_white',
+        },
+        secondary_log_colors={},
+        style='%'
+    )
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger = logging.getLogger()
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
-        formatter = ColoredFormatter(
-            "%(log_color)s%(levelname)-8s %(name)-14s %(message)s",
-            datefmt=None,
-            reset=True,
-            log_colors={
-                'DEBUG':    'cyan',
-                'INFO':     'green',
-                'WARNING':  'yellow',
-                'ERROR':    'red',
-                'CRITICAL': 'red,bg_white',
-            },
-            secondary_log_colors={},
-            style='%'
-        )
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        logger = logging.getLogger()
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+    import argparse
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        '-c', '--config',
+        help='Config file path',
+        required=True)
+    parser.add_argument(
+        '-d', '--debug',
+        help='Display debug messages',
+        action='store_true',
+        default=False)
+    parser.add_argument(
+        '-V', '--version',
+        help='Show version and exit',
+        action='version',
+        version='Atlassian2Gitlab {}'.format(a2g.__version__))
+    args = parser.parse_args()
+    a2g.debug = args.debug
 
-    def initConfig(self, description):
-        import argparse
-        import configparser
-        parser = argparse.ArgumentParser(description=description)
-        parser.add_argument(
-            '-c', '--config',
-            help='Config file path',
-            required=True)
-        parser.add_argument(
-            '-d', '--debug',
-            help='Display debug messages',
-            action='store_true',
-            default=False)
-        parser.add_argument(
-            '-V', '--version',
-            help='Show version and exit',
-            action='version',
-            version=self.version)
-        args = parser.parse_args()
-        config = configparser.ConfigParser()
-        config.read(args.config)
-        Config(config)
-
-    @property
-    def version(self):
-        import atlassian2gitlab
-        return 'Atlassian2Gitlab {}'.format(atlassian2gitlab.__version__)
+    import configparser
+    config = configparser.ConfigParser()
+    config.read(args.config)
+    Config(config)
