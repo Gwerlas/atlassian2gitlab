@@ -11,11 +11,6 @@ pycodestyle:
     - pip install pycodestyle
     - pycodestyle atlassian2gitlab/ tests/
 
-python34:
-  <<: *tests
-  image: python:3.4
-  script: tox -e py34
-
 python35:
   <<: *tests
   image: python:3.5

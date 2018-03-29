@@ -14,10 +14,8 @@ Based on [`python-gitlab`](https://pypi.python.org/pypi/python-gitlab) and [`jir
 Installation
 ------------
 
-Supported version of python :
+Supported versions of python :
 
-* 2.7
-* 3.4
 * 3.5
 * 3.6
 * Pypy3
