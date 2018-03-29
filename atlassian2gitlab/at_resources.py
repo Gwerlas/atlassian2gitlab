@@ -1,4 +1,4 @@
-from atlassian2gitlab import managers
+from . import managers
 import re
 
 

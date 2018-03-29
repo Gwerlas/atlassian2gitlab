@@ -1,5 +1,5 @@
 import atlassian2gitlab as a2g
-from atlassian2gitlab import gl_resources as resources
+from . import gl_resources as resources
 import logging
 from singleton_decorator import singleton
 

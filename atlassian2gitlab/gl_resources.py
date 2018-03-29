@@ -1,7 +1,7 @@
 import logging
 import atlassian2gitlab as a2g
-from atlassian2gitlab import managers
-from atlassian2gitlab.exceptions import NotFoundException
+from . import managers
+from .exceptions import NotFoundException
 
 
 class Resource(object):

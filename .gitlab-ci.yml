@@ -2,7 +2,6 @@
   tags:
     - docker
   before_script:
-    - pip install -r requirements.txt
     - pip install tox
 
 pycodestyle:
