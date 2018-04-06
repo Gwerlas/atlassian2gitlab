@@ -9,8 +9,7 @@ class Resource(object):
     toSave = False
 
     def __init__(self):
-        name = '.'.join((self.__module__, self.__class__.__name__))
-        self.logger = logging.getLogger(name)
+        self.logger = logging.getLogger('atlassian2gitlab')
 
     def __getattr__(self, name):
         return getattr(self.get(), name)
@@ -200,7 +199,7 @@ class Project(Resource):
         return issue
 
     def flush(self):
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger('atlassian2gitlab')
         issues = self.get().issues.list(all=True)
         milestones = self.get().milestones.list(all=True)
         if len(issues) + len(milestones) == 0:
@@ -316,7 +315,7 @@ class User(Resource):
                 err = '{} users found matching {}'.format(
                     len(users),
                     self._username)
-                logging.getLogger(__name__).debug(
+                logging.getLogger('atlassian2gitlab').debug(
                     "No such user `%s'" % self._username)
                 raise NotFoundException(err)
         return self._item

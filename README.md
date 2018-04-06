@@ -32,7 +32,6 @@ optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Config file path
-  -d, --debug           Display debug messages
   -V, --version         Show version and exit
 ```
 
@@ -47,7 +46,6 @@ optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Config file path
-  -d, --debug           Display debug messages
   -V, --version         Show version and exit
 ```
 
@@ -116,6 +114,44 @@ By default, we convert from the Fibonaci suite, commonly used by SCRUM teams, to
 |         55          |           9           |
 
 If the story points value is nor in this table, nor in the config file map, we use the value as is, but limited at 9 (the max issue weight).
+
+### Outputs and logs
+
+There is neither verbose nor debugging options because everything is configurable. Here is a simple example to have basics outputs :
+
+```ini
+[loggers]
+keys = root,atlassian2gitlab
+
+[logger_root]
+handlers = 
+level = INFO
+
+[logger_atlassian2gitlab]
+handlers = stream
+level = NOTSET
+qualname = atlassian2gitlab
+
+[handlers]
+keys = stream
+
+[handler_stream]
+class = StreamHandler
+level = NOTSET
+formatter = color
+args = ()
+
+[formatters]
+keys = color
+
+[formatter_color]
+class = colorlog.ColoredFormatter
+format = %(log_color)s%(message)s
+```
+
+You can find a more complete example in the [config-sample.ini](config-sample.ini) file.
+
+Also, You can look at the [Configuration file format](https://docs.python.org/3/library/logging.config.html#configuration-file-format) documentation for more facilities.
 
 Contributing
 ------------

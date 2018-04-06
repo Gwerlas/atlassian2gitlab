@@ -4,7 +4,7 @@ import logging
 from singleton_decorator import singleton
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('atlassian2gitlab')
 
 
 @singleton
@@ -139,9 +139,12 @@ class JiraManager(object):
     def cp(self):
         issues = self.activeIssues()
         total = len(issues)
+
         if total == 0:
             logger.info('Nothing to do')
             return self
+        else:
+            logger.info('%d issues to migrate', total)
 
         i = 0
         for issue in issues:
@@ -154,7 +157,7 @@ class JiraManager(object):
                 logger.warning('Skip issue %s: %s', issue.key, e)
 
         if i == total:
-            logger.info('All %d issues migrated', total)
+            logger.info('All done')
         elif i == 0:
             logger.error('Any issues migrated')
         else:

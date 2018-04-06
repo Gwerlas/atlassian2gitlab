@@ -1,7 +1,6 @@
 __version__ = 0.3
 
 
-debug = False
 gitlab_url = None
 gitlab_token = None
 gitlab_repo = None

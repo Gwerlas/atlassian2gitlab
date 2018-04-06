@@ -8,7 +8,6 @@ class Config(object):
     >>> import atlassian2gitlab as a2g
     >>> import configparser
     >>> config = configparser.ConfigParser()
-    >>> config['DEFAULT'] = {'debug': 'on'}
     >>> config['gitlab'] = {
     ...     'url': 'http://my-gitlab.local',
     ...     'token': 'get-it-from-your-profile',
@@ -21,8 +20,7 @@ class Config(object):
     >>> config['story_points'] = {'5': '4'}
     >>> config['user_map'] = {'jira': 'gitlab'}
     >>> c = Config(config)
-    >>> a2g.debug
-    True
+
     >>> a2g.ssl_verify
     True
     >>> a2g.gitlab_url
@@ -50,8 +48,6 @@ class Config(object):
     conversions in Gitlab issue weight.
     Configparser send DEFAULTSECT, so we have to ignore no numerical keys.
 
-    >>> 'debug' in a2g.storyPoint_map
-    False
     >>> 'key' in a2g.storyPoint_map
     False
     >>> a2g.storyPoint_map[5]
@@ -59,14 +55,14 @@ class Config(object):
     """
     def __init__(self, config):
         defaults = config['DEFAULT']
-        debug = defaults.getboolean('debug', fallback=False)
-        if debug:
-            a2g.debug = True
         a2g.ssl_verify = defaults.getboolean('ssl_verify', fallback=True)
         if 'story_points' in config:
             self.mapStoryPoints(config['story_points'])
         if 'user_map' in config:
             a2g.user_map = config['user_map']
+        if 'loggers' in config:
+            import logging.config
+            logging.config.fileConfig(config)
 
         gl_config = config['gitlab']
         a2g.gitlab_token = gl_config.get('token')
@@ -106,29 +102,6 @@ class Config(object):
 
 
 def configure(description):
-    from colorlog import ColoredFormatter
-    import logging
-
-    formatter = ColoredFormatter(
-        "%(log_color)s%(levelname)-8s %(name)-14s %(message)s",
-        datefmt=None,
-        reset=True,
-        log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
-            'CRITICAL': 'red,bg_white',
-        },
-        secondary_log_colors={},
-        style='%'
-    )
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger = logging.getLogger()
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-
     import argparse
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
@@ -136,17 +109,11 @@ def configure(description):
         help='Config file path',
         required=True)
     parser.add_argument(
-        '-d', '--debug',
-        help='Display debug messages',
-        action='store_true',
-        default=False)
-    parser.add_argument(
         '-V', '--version',
         help='Show version and exit',
         action='version',
         version='Atlassian2Gitlab {}'.format(a2g.__version__))
     args = parser.parse_args()
-    a2g.debug = args.debug
 
     import configparser
     config = configparser.ConfigParser()

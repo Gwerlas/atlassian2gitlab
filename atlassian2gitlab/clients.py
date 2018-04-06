@@ -18,8 +18,6 @@ class Gitlab(object):
                 ssl_verify=a2g.ssl_verify,
                 api_version=4,
                 session=session)
-            if a2g.debug:
-                self.__gitlab.enable_debug()
         return getattr(self.__gitlab, name)
 
 

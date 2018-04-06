@@ -22,7 +22,7 @@ def test_no_jira_issues_to_copy(caplog, mocker):
     manager._jira.search_issues.return_value = []
     manager.cp()
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.managers', logging.INFO, 'Nothing to do')
+        ('atlassian2gitlab', logging.INFO, 'Nothing to do')
     ]
 
 
@@ -43,9 +43,9 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
 
     project.addIssue.assert_called_once_with(issue)
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.managers', logging.WARNING,
-            'Skip issue PRO-42: Fail !'),
-        ('atlassian2gitlab.managers', logging.ERROR, 'Any issues migrated')
+        ('atlassian2gitlab', logging.INFO, '1 issues to migrate'),
+        ('atlassian2gitlab', logging.WARNING, 'Skip issue PRO-42: Fail !'),
+        ('atlassian2gitlab', logging.ERROR, 'Any issues migrated')
     ]
 
 
@@ -67,9 +67,9 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
 
     assert project.addIssue.call_count == 2
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.managers', logging.WARNING,
-            'Skip issue PRO-42: Fail !'),
-        ('atlassian2gitlab.managers', logging.WARNING, '1/2 issues migrated')
+        ('atlassian2gitlab', logging.INFO, '2 issues to migrate'),
+        ('atlassian2gitlab', logging.WARNING, 'Skip issue PRO-42: Fail !'),
+        ('atlassian2gitlab', logging.WARNING, '1/2 issues migrated')
     ]
 
 
@@ -89,5 +89,6 @@ def test_copy_jira_issues(caplog, mocker):
 
     project.addIssue.assert_called_once_with(issue)
     assert caplog.record_tuples == [
-        ('atlassian2gitlab.managers', logging.INFO, 'All 1 issues migrated')
+        ('atlassian2gitlab', logging.INFO, '1 issues to migrate'),
+        ('atlassian2gitlab', logging.INFO, 'All done')
     ]
