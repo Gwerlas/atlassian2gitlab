@@ -67,6 +67,7 @@ def test_add_jira_issue(mocker):
 
 
 def test_nothing_to_flush(caplog, mocker):
+    logging.getLogger('atlassian2gitlab').setLevel(logging.INFO)
     project = Project('fake/project')
     project._item = munchify({
         'issues': {
