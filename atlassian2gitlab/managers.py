@@ -48,6 +48,9 @@ class GitlabManager(object):
         it exists in gitlab.
         But if the user is not found, we will try the special user `_default`.
         Otherwise, the gitlab's token owner will be used.
+
+        Returns:
+            atlassian2gitlab.gl_resources.User
         """
         if name not in self._users:
             from atlassian2gitlab.exceptions import NotFoundException
@@ -126,7 +129,7 @@ class JiraManager(object):
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
-            'summary', 'reporter']
+            'summary', 'reporter', 'comment']
         fields.append(self.getFieldId('Sprint'))
         fields.append(self.getFieldId('Story Points'))
         return self.jira.search_issues(jql, fields=', '.join(fields))

@@ -153,6 +153,23 @@ You can find a more complete example in the [config-sample.ini](config-sample.in
 
 Also, You can look at the [Configuration file format](https://docs.python.org/3/library/logging.config.html#configuration-file-format) documentation for more facilities.
 
+### Links between Atlassian and Gitlab
+
+By default, we add a Link to the source. It's usefull while transitting from Atlassian to Gitlab.  
+You can turn off this feature in the config file. For example, turning off link creation to Jira :
+
+```ini
+[jira]
+link_to_source = Off
+```
+
+Or globally for the entire Atlassian suite :
+
+```ini
+[DEFAULT]
+link_to_source = Off
+```
+
 Contributing
 ------------
 

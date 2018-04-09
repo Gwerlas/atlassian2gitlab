@@ -4,12 +4,12 @@ from . import managers
 from .exceptions import NotFoundException
 
 
+logger = logging.getLogger('atlassian2gitlab')
+
+
 class Resource(object):
     _item = None
     toSave = False
-
-    def __init__(self):
-        self.logger = logging.getLogger('atlassian2gitlab')
 
     def __getattr__(self, name):
         return getattr(self.get(), name)
@@ -50,13 +50,11 @@ class Issue(Resource):
                 sudo=self.owner.username)
             self._data = {}
             self.toSave = False
-        return self
 
     def setData(self, k, v):
         if not hasattr(self._item, k) or getattr(self._item, k) != v:
             self._data[k] = v
             self.toSave = True
-        return self
 
     def setAssignee(self, username):
         assignee = managers.GitlabManager().findUser(username)
@@ -77,7 +75,6 @@ class Issue(Resource):
             m = re.search(r'id=(\d+),', sprints[-1])
             id = m.group(1)
             return manager.jira.sprint(id)
-        return None
 
     def setMilestoneFromSprint(self, sprint):
         milestone = managers.GitlabManager().findMilestone(str(sprint))
@@ -152,7 +149,21 @@ class Issue(Resource):
         spField = manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
             self.setWeight(getattr(fields, spField))
-        return self.save()
+        self.save()
+
+        if hasattr(fields, 'comment'):
+            for comment in fields.comment.comments:
+                data = {
+                    'body': converter.toMarkdown(comment.body),
+                    'created_at': comment.created}
+                user = managers.GitlabManager().findUser(comment.author.key)
+                self._item.notes.create(data, sudo=user.username)
+
+        if a2g.link_to_jira_source:
+            key = jira_issue.key
+            url = jira_issue.permalink()
+            self._item.notes.create({
+                'body': 'Imported from [{}]({})'.format(key, url)})
 
 
 class Project(Resource):
@@ -199,7 +210,6 @@ class Project(Resource):
         return issue
 
     def flush(self):
-        logger = logging.getLogger('atlassian2gitlab')
         issues = self.get().issues.list(all=True)
         milestones = self.get().milestones.list(all=True)
         if len(issues) + len(milestones) == 0:
@@ -265,7 +275,7 @@ class ProjectMilestone(Resource):
     def create(self):
         data = {'title': self._title}
         self._item = managers.GitlabManager().project.milestones.create(data)
-        self.logger.debug('Milestone {} created : #{}'.format(
+        logger.debug('Milestone {} created : #{}'.format(
             self._title, self._item.id
         ))
         return self

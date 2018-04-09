@@ -1,5 +1,6 @@
 import pytest
 from munch import munchify
+import atlassian2gitlab as a2g
 from atlassian2gitlab.gl_resources import Issue
 
 
@@ -15,6 +16,7 @@ def fakeJiraManager(mocker):
     mock = mocker.patch('atlassian2gitlab.managers.JiraManager')
     mgr = mock.return_value
     mgr.jira = mocker.MagicMock()
+    mgr.getFieldId.return_value = 'customfield_10001'
     return mgr
 
 
@@ -41,7 +43,8 @@ def test_create(mocker):
     issue.owner = mocker.MagicMock()
     issue.owner.username = 'jdoe'
 
-    issue.setData('foo', 'bar').save()
+    issue.setData('foo', 'bar')
+    issue.save()
 
     mgr.project.issues.create.assert_called_once_with(
         {'foo': 'bar'},
@@ -52,7 +55,6 @@ def test_create(mocker):
 
 def test_get_no_sprint(mocker):
     mgr = fakeJiraManager(mocker)
-    mgr.getFieldId.return_value = 'customfield_10001'
 
     jira_fields = munchify({})
     issue = Issue()
@@ -62,7 +64,6 @@ def test_get_no_sprint(mocker):
 
 def test_get_sprint(mocker):
     mgr = fakeJiraManager(mocker)
-    mgr.getFieldId.return_value = 'customfield_10001'
     mgr.jira.sprint.return_value = 'Sprint 1'
 
     jira_fields = munchify({'customfield_10001': ['id=20,']})
@@ -121,19 +122,29 @@ def test_set_owner(mocker):
     assert issue.owner == 'John Doe'
 
 
-def test_create_from_jira_issue_with_sprint(mocker):
-    mgr = fakeJiraManager(mocker)
-    user = fakeUser()
-    issue = Issue()
-
-    jira_issue = munchify({'fields': {
+class fakeJiraIssue(object):
+    key = 'PRO-1'
+    fields = munchify({
         'created': 'now',
         'summary': 'Title',
         'reporter': {'name': 'jdoe'},
         'assignee': {'name': 'jdoe'},
         'description': 'Big content',
+        'fixVersions': [],
         'customfield_10001': 1
-    }})
+    })
+
+    def permalink(self):
+        return 'http://url/'
+
+
+def test_create_from_jira_issue_with_sprint(mocker):
+    a2g.link_to_jira_source = False
+    mgr = fakeJiraManager(mocker)
+    user = fakeUser()
+    issue = Issue()
+
+    jira_issue = fakeJiraIssue()
 
     mocker.patch.object(issue, 'getSprint')
     mocker.patch.object(issue, 'setWeight')
@@ -141,7 +152,6 @@ def test_create_from_jira_issue_with_sprint(mocker):
     mocker.patch.object(issue, 'save')
 
     fakeGitlabManager(mocker).findUser.return_value = user
-    mgr.getFieldId.return_value = 'customfield_10001'
     issue.getSprint.return_value = 'Sprint 1'
 
     issue.fillFromJira(jira_issue)
@@ -153,19 +163,13 @@ def test_create_from_jira_issue_with_sprint(mocker):
 
 
 def test_create_from_jira_issue_with_version(mocker):
+    a2g.link_to_jira_source = False
     mgr = fakeJiraManager(mocker)
     user = fakeUser()
     issue = Issue()
 
-    jira_issue = munchify({'fields': {
-        'created': 'now',
-        'summary': 'Title',
-        'reporter': {'name': 'jdoe'},
-        'assignee': {'name': 'jdoe'},
-        'description': 'Big content',
-        'fixVersions': ['1.0'],
-        'customfield_10001': 1
-    }})
+    jira_issue = fakeJiraIssue()
+    jira_issue.fields.fixVersions.append('1.0')
 
     mocker.patch.object(issue, 'getSprint')
     mocker.patch.object(issue, 'setWeight')
@@ -173,7 +177,6 @@ def test_create_from_jira_issue_with_version(mocker):
     mocker.patch.object(issue, 'save')
 
     fakeGitlabManager(mocker).findUser.return_value = user
-    mgr.getFieldId.return_value = 'customfield_10001'
     issue.getSprint.return_value = None
 
     issue.fillFromJira(jira_issue)
@@ -182,3 +185,34 @@ def test_create_from_jira_issue_with_version(mocker):
     issue.setWeight.assert_called_once_with(1)
     issue.setMilestoneFromVersion.assert_called_once_with('1.0')
     assert issue.save.call_count == 1
+
+
+def test_create_from_jira_issue_with_sprint(mocker):
+    a2g.link_to_jira_source = True
+    mgr = fakeJiraManager(mocker)
+    user = fakeUser()
+
+    issue = Issue()
+    issue._item = mocker.MagicMock()
+    issue._item.notes = mocker.MagicMock()
+
+    jira_issue = fakeJiraIssue()
+    jira_issue.fields.comment = munchify({'comments': [
+        {'body': 'Content', 'created': 'now', 'author': {'key': 'jdoe'}}
+    ]})
+
+    mocker.patch.object(issue, 'getSprint')
+    mocker.patch.object(issue, 'setWeight')
+    mocker.patch.object(issue, 'setMilestoneFromSprint')
+    mocker.patch.object(issue, 'save')
+
+    fakeGitlabManager(mocker).findUser.return_value = user
+    issue.getSprint.return_value = 'Sprint 1'
+
+    issue.fillFromJira(jira_issue)
+
+    mgr.getFieldId.assert_called_once_with('Story Points')
+    issue.setWeight.assert_called_once_with(1)
+    issue.setMilestoneFromSprint.assert_called_once_with('Sprint 1')
+    assert issue.save.call_count == 1
+    assert issue._item.notes.create.call_count == 2

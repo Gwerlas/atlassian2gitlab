@@ -16,7 +16,8 @@ class Config(object):
     ...     'key': 'PRO',
     ...     'url': 'http://my-jira.local',
     ...     'username': 'jdoe',
-    ...     'password': 'secret'}
+    ...     'password': 'secret',
+    ...     'link_to_source': 'Off'}
     >>> config['story_points'] = {'5': '4'}
     >>> config['user_map'] = {'jira': 'gitlab'}
     >>> c = Config(config)
@@ -37,6 +38,8 @@ class Config(object):
     'jdoe'
     >>> a2g.jira_password
     'secret'
+    >>> a2g.link_to_jira_source
+    False
 
     If a section named `user_map` is present, we use it as a map for
     user conversion between the Atlassian suite and Gitlab.
@@ -74,6 +77,8 @@ class Config(object):
         a2g.jira_key = ji_config.get('key')
         a2g.jira_username = ji_config.get('username')
         a2g.jira_password = ji_config.get('password')
+        a2g.link_to_jira_source = ji_config.getboolean(
+            'link_to_source', fallback=True)
 
     def mapStoryPoints(self, dict):
         """

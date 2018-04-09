@@ -8,6 +8,9 @@ jira_url = None
 jira_key = None
 jira_username = None
 jira_password = None
+
+link_to_jira_source = True
+
 storyPoint_map = {
     5: 4,
     8: 5,
