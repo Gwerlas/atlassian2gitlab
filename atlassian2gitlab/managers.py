@@ -90,7 +90,7 @@ class GitlabManager(object):
     def findMilestone(self, title):
         """
         Return the expected project milestone
-    
+
         Returns:
             atlassian2gitlab.gl_resources.ProjectMilestone
         """

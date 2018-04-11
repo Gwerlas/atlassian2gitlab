@@ -6,7 +6,7 @@
 
 pycodestyle:
   <<: *tests
-  image: python
+  image: python:3.6
   script:
     - pip install pycodestyle
     - pycodestyle atlassian2gitlab/ tests/
