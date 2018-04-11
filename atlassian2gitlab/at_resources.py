@@ -40,29 +40,29 @@ class AtlassianNotationConverter(object):
         Translate lists from Atlassian notation to Markdown
 
         >>> converter = AtlassianNotationConverter()
-        >>> match = re.match(r'^([\*\#]+) ', '* ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '* ')
         >>> converter._listsToMarkdown(match)
         '\\n- '
-        >>> match = re.match(r'^([\*\#]+) ', '** ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '** ')
         >>> converter._listsToMarkdown(match)
         '   - '
-        >>> match = re.match(r'^([\*\#]+) ', '*#* ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '*#* ')
         >>> converter._listsToMarkdown(match)
         '      - '
-        >>> match = re.match(r'^([\*\#]+) ', '# ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '# ')
         >>> converter._listsToMarkdown(match)
         '\\n1. '
-        >>> match = re.match(r'^([\*\#]+) ', '*# ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '*# ')
         >>> converter._listsToMarkdown(match)
         '   1. '
-        >>> match = re.match(r'^([\*\#]+) ', '**# ')
+        >>> match = re.match(r'^([\\*\\#]+) ', '**# ')
         >>> converter._listsToMarkdown(match)
         '      1. '
         """
         notation = match.group(1)
         count = len(notation)
         res = '\n' if count == 1 else ''
-        res += '   ' * (count-1)
+        res += '   ' * (count - 1)
         res += '1. ' if notation.endswith('#') else '- '
         return res
 
@@ -83,7 +83,7 @@ class AtlassianNotationConverter(object):
     def _tableHeadingsToMarkdown(self, match):
         first = '\n\n|'
         second = '|'
-        for m in re.finditer('(?<=\|\|)([^|]*)(?=\|\|)', match.string):
+        for m in re.finditer(r'(?<=\|\|)([^|]*)(?=\|\|)', match.string):
             first += m.group(1) + '|'
             second += '-' * len(m.group(1)) + '|'
         return first + '\n' + second
