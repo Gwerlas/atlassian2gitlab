@@ -131,7 +131,8 @@ class fakeJiraIssue(object):
         'assignee': {'name': 'jdoe'},
         'description': 'Big content',
         'fixVersions': [],
-        'customfield_10001': 1
+        'customfield_10001': 1,
+        'issuetype': {'name': 'Story', 'iconUrl': 'http://url'}
     })
 
     def permalink(self):

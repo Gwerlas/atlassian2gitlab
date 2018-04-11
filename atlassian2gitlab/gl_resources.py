@@ -9,6 +9,7 @@ logger = logging.getLogger('atlassian2gitlab')
 
 class Resource(object):
     _item = None
+    _data = {}
     toSave = False
 
     def __getattr__(self, name):
@@ -20,22 +21,19 @@ class Resource(object):
     def get(self):
         raise NotImplementedError
 
-    def save(self):
-        """
-        Save the resource to Gitlab
+    def setData(self, k, v):
+        if not hasattr(self._item, k) or getattr(self._item, k) != v:
+            self._data[k] = v
+            self.toSave = True
 
-        Returns:
-            Resource
-        """
+    def save(self):
         if self.toSave:
             self.get().save()
+            self._data = {}
             self.toSave = False
-        return self
 
 
 class Issue(Resource):
-    _data = {}
-
     def __init__(self):
         Resource.__init__(self)
         self.project = managers.GitlabManager().project
@@ -50,11 +48,6 @@ class Issue(Resource):
                 sudo=self.owner.username)
             self._data = {}
             self.toSave = False
-
-    def setData(self, k, v):
-        if not hasattr(self._item, k) or getattr(self._item, k) != v:
-            self._data[k] = v
-            self.toSave = True
 
     def setAssignee(self, username):
         assignee = managers.GitlabManager().findUser(username)
@@ -75,6 +68,30 @@ class Issue(Resource):
             m = re.search(r'id=(\d+),', sprints[-1])
             id = m.group(1)
             return manager.jira.sprint(id)
+
+    def setLabelFromIssueType(self, issuetype):
+        """
+        Set the appropriate label for the given Jira issue type
+
+        If the label has not yet a color, we will try to get the dominant
+        color from the issue type's icon.
+        """
+        label = managers.GitlabManager().findLabel(issuetype.name)
+        if not label.hasColor():
+            import os
+            import urllib.request
+            from colorthief import ColorThief
+            tmpfile, headers = urllib.request.urlretrieve(issuetype.iconUrl)
+            if headers.get_content_type() == 'image/svg+xml':
+                from svglib.svglib import svg2rlg
+                from reportlab.graphics import renderPM
+                drawing = svg2rlg(tmpfile)
+                renderPM.drawToFile(drawing, tmpfile)
+            rgb = ColorThief(tmpfile).get_color(quality=1)
+            os.unlink(tmpfile)
+            label.setData('color', '#%02x%02x%02x' % rgb)
+            label.save()
+        self.setData('labels', [label.name])
 
     def setMilestoneFromSprint(self, sprint):
         milestone = managers.GitlabManager().findMilestone(str(sprint))
@@ -149,6 +166,8 @@ class Issue(Resource):
         spField = manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
             self.setWeight(getattr(fields, spField))
+
+        self.setLabelFromIssueType(fields.issuetype)
         self.save()
 
         if hasattr(fields, 'comment'):
@@ -164,6 +183,32 @@ class Issue(Resource):
             url = jira_issue.permalink()
             self._item.notes.create({
                 'body': 'Imported from [{}]({})'.format(key, url)})
+
+
+class Label(Resource):
+    def __init__(self, name):
+        Resource.__init__(self)
+        self.name = name
+        self.setData('name', name)
+
+    def get(self):
+        project = managers.GitlabManager().project
+        if not self._item:
+            self._item = project.labels.get(self.name)
+        if not self._item:
+            self.save()
+        return self._item
+
+    def save(self):
+        if not self._item:
+            self._item = managers.GitlabManager().project.labels.create(
+                self._data)
+            self._data = {}
+            self.toSave = False
+            logger.debug('Label {} created'.format(self.name))
+
+    def hasColor(self):
+        return 'color' in self._data
 
 
 class Project(Resource):
@@ -211,8 +256,9 @@ class Project(Resource):
 
     def flush(self):
         issues = self.get().issues.list(all=True)
+        labels = self.get().labels.list(all=True)
         milestones = self.get().milestones.list(all=True)
-        if len(issues) + len(milestones) == 0:
+        if len(issues) + len(milestones) + len(labels) == 0:
             logger.info('Nothing to do')
             return self
 
@@ -233,6 +279,24 @@ class Project(Resource):
                 logger.error('Any issues deleted')
             else:
                 logger.warn('%d/%d issues deleted', i, total)
+
+        if len(labels):
+            total = len(labels)
+            i = 0
+            for l in labels:
+                try:
+                    l.delete()
+                    i += 1
+                except Exception as e:
+                    logger.warn('Label "%s" has not been deleted: %s',
+                                m.title, e)
+
+            if i == total:
+                logger.info('All %d labels deleted', total)
+            elif i == 0:
+                logger.error('Any labels deleted')
+            else:
+                logger.warn('%d/%d labels deleted', i, total)
 
         if len(milestones):
             total = len(milestones)
@@ -258,27 +322,39 @@ class Project(Resource):
 class ProjectMilestone(Resource):
     def __init__(self, title):
         Resource.__init__(self)
-        self._title = title
+        self.title = title
+        self.setData('title', title)
 
     def get(self):
+        """
+        Fetch Gitlab's object
+
+        We get informations from Gitlab only if necessary, the milestone isn't
+        created until we call the `save()` method or the `id` property.
+        It's created once, if a milestone with the same title exists, it will
+        be used.
+        """
         if not self._item:
             milestones = managers.GitlabManager().project.milestones.list(
-                search=self._title)
+                search=self.title)
             for m in milestones:
-                if m.title == self._title:
+                if m.title == self.title:
                     self._item = m
                     break
             if not self._item:
-                self.create()
+                self.save()
         return self._item
 
-    def create(self):
-        data = {'title': self._title}
-        self._item = managers.GitlabManager().project.milestones.create(data)
-        logger.debug('Milestone {} created : #{}'.format(
-            self._title, self._item.id
-        ))
-        return self
+    def save(self):
+        if not self._item:
+            self._item = managers.GitlabManager().project.milestones.create(
+                self._data)
+            self._data = {}
+            self.toSave = False
+            logger.debug('Milestone {} created : #{}'.format(
+                self.title, self._item.id))
+        else:
+            Resource.save(self)
 
     def fillFromJiraSprint(self, sprint):
         m = self.get()
@@ -288,7 +364,7 @@ class ProjectMilestone(Resource):
         if sprint.state == 'CLOSED' and m.state == 'active':
             m.state_event = 'close'
             self.toSave = True
-        return self.save()
+        self.save()
 
     def fillFromJiraVersion(self, version):
         m = self.get()
@@ -298,7 +374,7 @@ class ProjectMilestone(Resource):
         if version.released and m.state == 'active':
             m.state_event = 'close'
             self.toSave = True
-        return self.save()
+        self.save()
 
 
 class User(Resource):

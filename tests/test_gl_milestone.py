@@ -27,10 +27,10 @@ def test_get_milestone(mocker):
     mgr.project.milestones.list.return_value = [fakeGlMilestone()]
 
     mi = ProjectMilestone('1.0')
-    mocker.spy(mi, 'create')
+    mocker.spy(mi, 'save')
 
     assert mi.get().id == 1
-    assert mi.create.call_count == 0
+    assert mi.save.call_count == 0
 
 
 def test_create_on_get_missing_milestone(mocker):
@@ -39,10 +39,10 @@ def test_create_on_get_missing_milestone(mocker):
     mgr.project.milestones.create.return_value = fakeGlMilestone()
 
     mi = ProjectMilestone('1.0')
-    mocker.spy(mi, 'create')
+    mocker.spy(mi, 'save')
 
     assert mi.get().id == 1
-    assert mi.create.call_count == 1
+    assert mi.save.call_count == 1
 
 
 def test_fill_milestone_from_jira_sprint(mocker):

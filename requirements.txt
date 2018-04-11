@@ -1,6 +1,8 @@
 colorlog
+colorthief
 configparser
-deprecation
 jira
 python-gitlab
+reportlab
 singleton-decorator
+svglib

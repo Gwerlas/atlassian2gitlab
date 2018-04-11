@@ -70,12 +70,10 @@ def test_nothing_to_flush(caplog, mocker):
     logging.getLogger('atlassian2gitlab').setLevel(logging.INFO)
     project = Project('fake/project')
     project._item = munchify({
-        'issues': {
-            'list': lambda all: []
-        },
-        'milestones': {
-            'list': lambda all: []
-        }})
+        'issues': {'list': lambda all: []},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: []},
+    })
     project.flush()
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'Nothing to do')
@@ -88,12 +86,9 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
     issue.delete = mocker.stub(name="issue")
     issue.delete.side_effect = Exception('Fail !')
     project._item = munchify({
-        'issues': {
-            'list': lambda all: [issue]
-        },
-        'milestones': {
-            'list': lambda all: []
-        }
+        'issues': {'list': lambda all: [issue]},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: []},
     })
     project.flush()
     assert issue.delete.call_count == 1
@@ -112,12 +107,9 @@ def test_flush_issues_with_failure(mocker, caplog):
     issue_two = munchify({'id': 2})
     issue_two.delete = mocker.stub(name="issue_two")
     project._item = munchify({
-        'issues': {
-            'list': lambda all: [issue_one, issue_two]
-        },
-        'milestones': {
-            'list': lambda all: []
-        }
+        'issues': {'list': lambda all: [issue_one, issue_two]},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: []},
     })
     project.flush()
     assert issue_one.delete.call_count == 1
@@ -135,12 +127,9 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
     milestone.delete = mocker.stub(name="issue")
     milestone.delete.side_effect = Exception('Fail !')
     project._item = munchify({
-        'issues': {
-            'list': lambda all: []
-        },
-        'milestones': {
-            'list': lambda all: [milestone]
-        }
+        'issues': {'list': lambda all: []},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: [milestone]}
     })
     project.flush()
     assert milestone.delete.call_count == 1
@@ -159,12 +148,9 @@ def test_flush_milestones_with_failure(mocker, caplog):
     milestone_two = munchify({'title': 'Sprint 2'})
     milestone_two.delete = mocker.stub(name="milestone_two")
     project._item = munchify({
-        'issues': {
-            'list': lambda all: []
-        },
-        'milestones': {
-            'list': lambda all: [milestone_one, milestone_two]
-        }
+        'issues': {'list': lambda all: []},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: [milestone_one, milestone_two]}
     })
     project.flush()
     assert milestone_one.delete.call_count == 1
@@ -183,12 +169,9 @@ def test_flush(mocker, caplog):
     milestone = munchify({'title': 'Sprint 1'})
     milestone.delete = mocker.stub(name="milestone")
     project._item = munchify({
-        'issues': {
-            'list': lambda all: [issue]
-        },
-        'milestones': {
-            'list': lambda all: [milestone]
-        }
+        'issues': {'list': lambda all: [issue]},
+        'labels': {'list': lambda all: []},
+        'milestones': {'list': lambda all: [milestone]}
     })
     project.flush()
     assert issue.delete.call_count == 1

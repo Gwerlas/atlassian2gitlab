@@ -56,12 +56,12 @@ def test_find_existing_milestone(mocker):
     manager = GitlabManager()
     manager._project = project
 
-    assert manager.findMilestone('1.0')._title == '1.0'
+    assert manager.findMilestone('1.0').title == '1.0'
 
 
 def test_find_milestone():
     manager = GitlabManager()
-    assert manager.findMilestone('2.0')._title == '2.0'
+    assert manager.findMilestone('2.0').title == '2.0'
 
 
 def test_gitlab_upload(mocker):

@@ -12,6 +12,7 @@ class GitlabManager(object):
     _gitlab = None
     _project = None
     _attachments = {}
+    _labels = {}
     _milestones = {}
     _users = {}
 
@@ -68,15 +69,28 @@ class GitlabManager(object):
                 self._users[name] = resources.User(username)
         return self._users[name]
 
+    def hasLabel(self, name):
+        """
+        Returns:
+            bool
+        """
+        return name in self._labels
+
+    def findLabel(self, name):
+        """
+        Return the expected project label
+
+        Returns:
+            atlassian2gitlab.gl_resources.Label
+        """
+        if name not in self._labels:
+            self._labels[name] = resources.Label(name)
+        return self._labels[name]
+
     def findMilestone(self, title):
         """
         Return the expected project milestone
-
-        We get informations from Gitlab only if necessary, the milestone isn't
-        created until we call the `save()` method or the `id` property.
-        It's created once, if a milestone with the same title exists, it will
-        be used.
-
+    
         Returns:
             atlassian2gitlab.gl_resources.ProjectMilestone
         """
@@ -129,7 +143,7 @@ class JiraManager(object):
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
-            'summary', 'reporter', 'comment']
+            'summary', 'reporter', 'comment', 'issuetype']
         fields.append(self.getFieldId('Sprint'))
         fields.append(self.getFieldId('Story Points'))
         return self.jira.search_issues(jql, fields=', '.join(fields))
