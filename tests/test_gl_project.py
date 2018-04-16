@@ -13,37 +13,21 @@ def fakeManager(mocker):
     return mgr
 
 
-def test_create_project_raise_exception():
-    project = Project(None)
-    with pytest.raises(NotImplementedError):
-        project.create()
-
-
 def test_raise_exception_if_project_not_found(mocker):
     manager = fakeManager(mocker)
     manager.gitlab.projects.list.return_value = []
-    project = Project('fake/name')
 
     with pytest.raises(A2GException):
-        project.get()
+        Project('fake/name')
 
 
 def test_raise_exception_if_other_projects_found(mocker):
     manager = fakeManager(mocker)
     manager.gitlab.projects.list.return_value = munchify(
         [{'path_with_namespace': 'fake/project'}])
-    project = Project('fake/name')
 
     with pytest.raises(A2GException):
-        project.get()
-
-
-def test_return_cached_project():
-    project = Project('fake/name')
-    fake = munchify({'path_with_namespace': 'fake/project'})
-    project._item = fake
-
-    assert project.get() == fake
+        Project('fake/name')
 
 
 def test_get_project(mocker):
@@ -52,22 +36,14 @@ def test_get_project(mocker):
         munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
 
-    assert project.get().path_with_namespace == 'fake/project'
-
-
-def test_add_jira_issue(mocker):
-    project = Project(None)
-    mock = mocker.patch('atlassian2gitlab.gl_resources.Issue')
-    issue = mock.return_value
-    jira_issue = object()
-
-    project.addIssue(jira_issue)
-
-    issue.fillFromJira.assert_called_once_with(jira_issue)
+    assert project.path_with_namespace == 'fake/project'
 
 
 def test_nothing_to_flush(caplog, mocker):
     logging.getLogger('atlassian2gitlab').setLevel(logging.INFO)
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     project._item = munchify({
         'issues': {'list': lambda all: []},
@@ -81,6 +57,9 @@ def test_nothing_to_flush(caplog, mocker):
 
 
 def test_flush_issues_in_complete_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
@@ -100,6 +79,9 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
 
 
 def test_flush_issues_with_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     issue_one = munchify({'id': 1})
     issue_one.delete = mocker.stub(name="issue_one")
@@ -122,9 +104,12 @@ def test_flush_issues_with_failure(mocker, caplog):
 
 
 def test_flush_milestones_in_complete_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     milestone = munchify({'title': 'Sprint 1'})
-    milestone.delete = mocker.stub(name="issue")
+    milestone.delete = mocker.stub(name="milestone")
     milestone.delete.side_effect = Exception('Fail !')
     project._item = munchify({
         'issues': {'list': lambda all: []},
@@ -141,6 +126,9 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
 
 
 def test_flush_milestones_with_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     milestone_one = munchify({'title': 'Sprint 1'})
     milestone_one.delete = mocker.stub(name="milestone_one")
@@ -162,20 +150,75 @@ def test_flush_milestones_with_failure(mocker, caplog):
     ]
 
 
+def test_flush_labels_in_complete_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
+    project = Project('fake/project')
+    label = munchify({'name': 'Story'})
+    label.delete = mocker.stub(name="label")
+    label.delete.side_effect = Exception('Fail !')
+    project._item = munchify({
+        'issues': {'list': lambda all: []},
+        'labels': {'list': lambda all: [label]},
+        'milestones': {'list': lambda all: []}
+    })
+    project.flush()
+    assert label.delete.call_count == 1
+    assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.WARNING,
+            'Label "Story" has not been deleted: Fail !'),
+        ('atlassian2gitlab', logging.ERROR, 'Any labels deleted')
+    ]
+
+
+def test_flush_labels_with_failure(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
+    project = Project('fake/project')
+    label_one = munchify({'name': 'Story'})
+    label_one.delete = mocker.stub(name="label_one")
+    label_one.delete.side_effect = Exception('Fail !')
+    label_two = munchify({'name': 'In Progress'})
+    label_two.delete = mocker.stub(name="label_two")
+    project._item = munchify({
+        'issues': {'list': lambda all: []},
+        'labels': {'list': lambda all: [label_one, label_two]},
+        'milestones': {'list': lambda all: []}
+    })
+    project.flush()
+    assert label_one.delete.call_count == 1
+    assert label_two.delete.call_count == 1
+    assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.WARNING,
+            'Label "Story" has not been deleted: Fail !'),
+        ('atlassian2gitlab', logging.WARNING, '1/2 labels deleted')
+    ]
+
+
 def test_flush(mocker, caplog):
+    manager = fakeManager(mocker)
+    manager.gitlab.projects.list.return_value = [
+        munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
+    label = munchify({'name': 'Story'})
+    label.delete = mocker.stub(name="label")
     milestone = munchify({'title': 'Sprint 1'})
     milestone.delete = mocker.stub(name="milestone")
     project._item = munchify({
         'issues': {'list': lambda all: [issue]},
-        'labels': {'list': lambda all: []},
+        'labels': {'list': lambda all: [label]},
         'milestones': {'list': lambda all: [milestone]}
     })
     project.flush()
     assert issue.delete.call_count == 1
+    assert label.delete.call_count == 1
+    assert milestone.delete.call_count == 1
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'All 1 issues deleted'),
+        ('atlassian2gitlab', logging.INFO, 'All 1 labels deleted'),
         ('atlassian2gitlab', logging.INFO, 'All 1 milestones deleted')
     ]

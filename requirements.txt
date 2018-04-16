@@ -2,7 +2,9 @@ colorlog
 colorthief
 configparser
 jira
+python-dateutil
 python-gitlab
 reportlab
 singleton-decorator
 svglib
+webcolors

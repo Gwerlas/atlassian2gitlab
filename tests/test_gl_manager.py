@@ -9,20 +9,6 @@ def fakeProject(mocker):
     return p
 
 
-def test_gitlab_manager(mocker):
-    a2g.gitlab_repo = 'fake/project'
-
-    manager = GitlabManager()
-    manager._gitlab = None
-    manager._project = None
-    mock = mocker.patch('atlassian2gitlab.clients.Gitlab')
-
-    manager.gitlab
-
-    assert manager.project._repo == 'fake/project'
-    assert mock.call_count == 1
-
-
 def test_use_current_user_if_user_not_found(mocker):
     manager = GitlabManager()
     gl = mocker.MagicMock()
@@ -34,7 +20,7 @@ def test_use_current_user_if_user_not_found(mocker):
     gl.user.username = 'current'
 
     user = manager.findUser('user')
-    assert user._username == 'current'
+    assert user.username == 'current'
     assert gl.auth.call_count == 1
 
 
@@ -47,7 +33,7 @@ def test_find_user(mocker):
     gl.users.list.return_value = ['me']
 
     user = manager.findUser('me')
-    assert user._username == 'me'
+    assert user.username == 'me'
 
 
 def test_find_existing_milestone(mocker):

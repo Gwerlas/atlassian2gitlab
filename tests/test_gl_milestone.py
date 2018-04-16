@@ -22,27 +22,24 @@ def fakeManager(mocker):
     return mgr
 
 
-def test_get_milestone(mocker):
+def test_milestone(mocker):
     mgr = fakeManager(mocker)
     mgr.project.milestones.list.return_value = [fakeGlMilestone()]
 
     mi = ProjectMilestone('1.0')
-    mocker.spy(mi, 'save')
 
-    assert mi.get().id == 1
-    assert mi.save.call_count == 0
+    assert mi.id == 1
 
 
-def test_create_on_get_missing_milestone(mocker):
+def test_create_milestone(mocker):
     mgr = fakeManager(mocker)
     mgr.project.milestones.list.return_value = []
     mgr.project.milestones.create.return_value = fakeGlMilestone()
 
     mi = ProjectMilestone('1.0')
-    mocker.spy(mi, 'save')
 
-    assert mi.get().id == 1
-    assert mi.save.call_count == 1
+    assert mi.id == 1
+    assert mgr.project.milestones.create.call_count == 1
 
 
 def test_fill_milestone_from_jira_sprint(mocker):
@@ -50,15 +47,12 @@ def test_fill_milestone_from_jira_sprint(mocker):
     mi = ProjectMilestone('1.0')
     mi._item = fakeGlMilestone()
 
-    sprint = munchify({'endDate': 'now', 'state': 'CLOSED'})
+    sprint = munchify({'endDate': '2008-04-12', 'state': 'CLOSED'})
 
-    mocker.spy(mi, 'save')
     mi.fillFromJiraSprint(sprint)
 
-    assert mi.save.call_count == 1
-    assert mi.toSave is False
-    assert mi.get().due_date == 'now'
-    assert mi.get().state_event == 'close'
+    assert mi.due_date == '2008-04-12'
+    assert mi.state_event == 'close'
 
 
 def test_fill_milestone_from_jira_version(mocker):
@@ -66,12 +60,9 @@ def test_fill_milestone_from_jira_version(mocker):
     mi = ProjectMilestone('1.0')
     mi._item = fakeGlMilestone()
 
-    version = munchify({'releaseDate': 'now', 'released': True})
+    version = munchify({'releaseDate': '12/Apr/08 09:00 PM', 'released': True})
 
-    mocker.spy(mi, 'save')
     mi.fillFromJiraVersion(version)
 
-    assert mi.save.call_count == 1
-    assert mi.toSave is False
-    assert mi.get().due_date == 'now'
-    assert mi.get().state_event == 'close'
+    assert mi.due_date == '2008-04-12'
+    assert mi.state_event == 'close'

@@ -13,7 +13,7 @@ class Config(object):
     ...     'token': 'get-it-from-your-profile',
     ...     'repo': 'fake/project'}
     >>> config['jira'] = {
-    ...     'key': 'PRO',
+    ...     'jql': 'Project=PRO',
     ...     'url': 'http://my-jira.local',
     ...     'username': 'jdoe',
     ...     'password': 'secret',
@@ -30,8 +30,8 @@ class Config(object):
     'get-it-from-your-profile'
     >>> a2g.gitlab_repo
     'fake/project'
-    >>> a2g.jira_key
-    'PRO'
+    >>> a2g.jira_jql
+    'Project=PRO'
     >>> a2g.jira_url
     'http://my-jira.local'
     >>> a2g.jira_username
@@ -51,7 +51,7 @@ class Config(object):
     conversions in Gitlab issue weight.
     Configparser send DEFAULTSECT, so we have to ignore no numerical keys.
 
-    >>> 'key' in a2g.storyPoint_map
+    >>> 'jql' in a2g.storyPoint_map
     False
     >>> a2g.storyPoint_map[5]
     4
@@ -74,7 +74,9 @@ class Config(object):
 
         ji_config = config['jira']
         a2g.jira_url = ji_config.get('url')
-        a2g.jira_key = ji_config.get('key')
+        a2g.jira_jql = ji_config.get('jql')
+        a2g.jira_epic_type = ji_config.get(
+            'epic_type', fallback='Documentation related')
         a2g.jira_username = ji_config.get('username')
         a2g.jira_password = ji_config.get('password')
         a2g.link_to_jira_source = ji_config.getboolean(

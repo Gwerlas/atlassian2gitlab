@@ -28,7 +28,9 @@ def test_no_jira_issues_to_copy(caplog, mocker):
 
 def test_copy_jira_issues_in_failure(caplog, mocker):
     manager = JiraManager()
-    issue = munchify({'key': 'PRO-42', 'fields': {}})
+    issue = munchify({
+        'key': 'PRO-42',
+        'fields': {'issuetype': {'name': 'Story'}}})
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
@@ -51,14 +53,22 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
 
 def test_copy_jira_issues_partially_in_failure(caplog, mocker):
     manager = JiraManager()
-    issue_one = munchify({'key': 'PRO-42', 'fields': {}})
-    issue_two = munchify({'key': 'PRO-43', 'fields': {}})
+    issue_one = munchify({
+        'key': 'PRO-42',
+        'fields': {'issuetype': {'name': 'Story'}}})
+    issue_two = munchify({
+        'key': 'PRO-43',
+        'fields': {'issuetype': {'name': 'Story'}}})
+    issue_three = munchify({
+        'key': 'PRO-44',
+        'fields': {'issuetype': {'name': 'Documentation related'}}})
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
         {'name': 'Story Points', 'id': 'field2'},
     ]
-    manager._jira.search_issues.return_value = [issue_one, issue_two]
+    manager._jira.search_issues.return_value = [
+        issue_one, issue_two, issue_three]
     project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     project.addIssue.side_effect = [A2GException('Fail !'), None]
     GitlabManager()._project = project
@@ -67,15 +77,20 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
 
     assert project.addIssue.call_count == 2
     assert caplog.record_tuples == [
-        ('atlassian2gitlab', logging.INFO, '2 issues to migrate'),
+        ('atlassian2gitlab', logging.INFO, '3 issues to migrate'),
         ('atlassian2gitlab', logging.WARNING, 'Skip issue PRO-42: Fail !'),
-        ('atlassian2gitlab', logging.WARNING, '1/2 issues migrated')
+        ('atlassian2gitlab', logging.WARNING,
+            "Skip issue PRO-44: It's an Epic"),
+        ('atlassian2gitlab', logging.WARNING,
+            '1/3 issues migrated (1 skipped)')
     ]
 
 
 def test_copy_jira_issues(caplog, mocker):
     manager = JiraManager()
-    issue = munchify({'key': 'PRO-42', 'fields': {}})
+    issue = munchify({
+        'key': 'PRO-42',
+        'fields': {'issuetype': {'name': 'Story'}}})
     manager._jira = mocker.MagicMock()
     manager._jira.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},

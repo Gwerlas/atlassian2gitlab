@@ -5,7 +5,8 @@ gitlab_url = None
 gitlab_token = None
 gitlab_repo = None
 jira_url = None
-jira_key = None
+jira_jql = None
+jira_epic_type = None
 jira_username = None
 jira_password = None
 

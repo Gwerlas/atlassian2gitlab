@@ -1,57 +1,42 @@
 import logging
+from dateutil.parser import parse
 import atlassian2gitlab as a2g
 from . import managers
 from .exceptions import NotFoundException
+from gitlab.exceptions import GitlabGetError
 
 
 logger = logging.getLogger('atlassian2gitlab')
 
 
-class Resource(object):
-    _item = None
-    _data = {}
-    toSave = False
-
-    def __getattr__(self, name):
-        return getattr(self.get(), name)
-
-    def create(self):
-        raise NotImplementedError
-
-    def get(self):
-        raise NotImplementedError
-
-    def setData(self, k, v):
-        if not hasattr(self._item, k) or getattr(self._item, k) != v:
-            self._data[k] = v
-            self.toSave = True
-
-    def save(self):
-        if self.toSave:
-            self.get().save()
-            self._data = {}
-            self.toSave = False
-
-
-class Issue(Resource):
+class Issue(object):
     def __init__(self):
-        Resource.__init__(self)
-        self.project = managers.GitlabManager().project
+        self._item = None
+        self._owner = None
+        self.assignee_ids = []
+        self.created_at = None
+        self.description = None
+        self.labels = []
+        self.milestone_id = None
+        self.title = None
+        self.weight = 0
 
     def save(self):
         """
         Create the Gitlab issue (update not yet supported)
         """
-        if not self._item:
-            self._item = self.project.issues.create(
-                self._data,
-                sudo=self.owner.username)
-            self._data = {}
-            self.toSave = False
-
-    def setAssignee(self, username):
-        assignee = managers.GitlabManager().findUser(username)
-        self.setData('assignee_ids', [assignee.id])
+        project = managers.GitlabManager().project
+        self._item = project.issues.create({
+            'created_at': self.created_at,
+            'title': self.title,
+            'assignee_ids': self.assignee_ids,
+            'description': self.description,
+            'milestone_id': self.milestone_id,
+            'weight': self.weight,
+            'labels': self.labels},
+            sudo=self._owner)
+        logger.debug("Issue `{}' created (#{})".format(
+            self.title, self._item.iid))
 
     def getSprint(self, fields):
         """
@@ -69,39 +54,50 @@ class Issue(Resource):
             id = m.group(1)
             return manager.jira.sprint(id)
 
-    def setLabelFromIssueType(self, issuetype):
-        """
-        Set the appropriate label for the given Jira issue type
+    def getDominantColorFromUrl(self, url):
+        import os
+        import urllib.request
+        from colorthief import ColorThief
+        tmpfile, headers = urllib.request.urlretrieve(url)
+        if headers.get_content_type() == 'image/svg+xml':
+            from svglib.svglib import svg2rlg
+            from reportlab.graphics import renderPM
+            drawing = svg2rlg(tmpfile)
+            renderPM.drawToFile(drawing, tmpfile)
+        color = ColorThief(tmpfile).get_color(quality=1)
+        os.unlink(tmpfile)
+        return '#%02x%02x%02x' % color
 
-        If the label has not yet a color, we will try to get the dominant
-        color from the issue type's icon.
-        """
-        label = managers.GitlabManager().findLabel(issuetype.name)
-        if not label.hasColor():
-            import os
-            import urllib.request
-            from colorthief import ColorThief
-            tmpfile, headers = urllib.request.urlretrieve(issuetype.iconUrl)
-            if headers.get_content_type() == 'image/svg+xml':
-                from svglib.svglib import svg2rlg
-                from reportlab.graphics import renderPM
-                drawing = svg2rlg(tmpfile)
-                renderPM.drawToFile(drawing, tmpfile)
-            rgb = ColorThief(tmpfile).get_color(quality=1)
-            os.unlink(tmpfile)
-            label.setData('color', '#%02x%02x%02x' % rgb)
-            label.save()
-        self.setData('labels', [label.name])
+    def addLabel(self, name, colorname=None, iconUrl=None):
+        label = managers.GitlabManager().findLabel(name)
+        if not label.color:
+            if colorname:
+                import webcolors
+                label.color = webcolors.name_to_hex(colorname)
+            elif iconUrl:
+                label.color = self.getDominantColorFromUrl(iconUrl)
+            if label.color:
+                label.save()
+        if name not in self.labels:
+            self.labels.append(name)
+
+    def addLabelFromIssueType(self, issuetype):
+        self.addLabel(issuetype.name, iconUrl=issuetype.iconUrl)
+
+    def addLabelFromStatus(self, status):
+        if status.raw['statusCategory']['key'] not in ('new', 'done'):
+            colorname = status.raw['statusCategory']['colorName'].split('-')[0]
+            self.addLabel(status.name, colorname=colorname)
 
     def setMilestoneFromSprint(self, sprint):
         milestone = managers.GitlabManager().findMilestone(str(sprint))
         milestone.fillFromJiraSprint(sprint)
-        self.setData('milestone_id', milestone.id)
+        self.milestone_id = milestone.id
 
     def setMilestoneFromVersion(self, version):
         milestone = managers.GitlabManager().findMilestone(str(version))
         milestone.fillFromJiraVersion(version)
-        self.setData('milestone_id', milestone.id)
+        self.milestone_id = milestone.id
 
     def getWeight(self, number):
         """
@@ -131,31 +127,25 @@ class Issue(Resource):
         v = a2g.storyPoint_map.get(n, n)
         return 9 if v > 9 else v
 
-    def setWeight(self, number):
-        self.setData('weight', self.getWeight(number))
-
-    def setOwner(self, username):
-        self.owner = managers.GitlabManager().findUser(username)
-
     def fillFromJira(self, jira_issue):
         from atlassian2gitlab.at_resources import JiraNotationConverter
-        manager = managers.JiraManager()
-        fields = jira_issue.fields
-        self.setData('created_at', fields.created)
-        self.setData('title', fields.summary)
-
         converter = JiraNotationConverter(jira_issue)
+        jira_manager = managers.JiraManager()
+        gl_manager = managers.GitlabManager()
+        fields = jira_issue.fields
+
+        self.created_at = parse(fields.created).isoformat()
+        self.title = fields.summary
 
         if fields.reporter:
-            self.setOwner(fields.reporter.name)
+            self._owner = gl_manager.findUser(fields.reporter.name).username
 
         if fields.assignee:
-            self.setAssignee(fields.assignee.name)
+            assignee = gl_manager.findUser(fields.assignee.name)
+            self.assignee_ids = [assignee.id]
 
         if fields.description:
-            self.setData(
-                'description',
-                converter.toMarkdown(fields.description))
+            self.description = converter.toMarkdown(fields.description)
 
         sprint = self.getSprint(fields)
         if sprint:
@@ -163,19 +153,21 @@ class Issue(Resource):
         elif len(fields.fixVersions):
             self.setMilestoneFromVersion(fields.fixVersions[-1])
 
-        spField = manager.getFieldId('Story Points')
+        spField = jira_manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
-            self.setWeight(getattr(fields, spField))
+            logger.debug(spField)
+            self.weight = self.getWeight(getattr(fields, spField))
 
-        self.setLabelFromIssueType(fields.issuetype)
+        self.addLabelFromIssueType(fields.issuetype)
+        self.addLabelFromStatus(fields.status)
         self.save()
 
         if hasattr(fields, 'comment'):
             for comment in fields.comment.comments:
                 data = {
                     'body': converter.toMarkdown(comment.body),
-                    'created_at': comment.created}
-                user = managers.GitlabManager().findUser(comment.author.key)
+                    'created_at': parse(comment.created).isoformat()}
+                user = gl_manager.findUser(comment.author.key)
                 self._item.notes.create(data, sudo=user.username)
 
         if a2g.link_to_jira_source:
@@ -184,61 +176,56 @@ class Issue(Resource):
             self._item.notes.create({
                 'body': 'Imported from [{}]({})'.format(key, url)})
 
+        if fields.resolution:
+            self._item.state_event = 'close'
+            self._item.updated_at = parse(fields.resolutiondate).isoformat()
+            self._item.save()
+            logger.debug("Close issue #%d", self._item.iid)
 
-class Label(Resource):
+
+class Label(object):
+    _item = None
+
     def __init__(self, name):
-        Resource.__init__(self)
         self.name = name
-        self.setData('name', name)
-
-    def get(self):
-        project = managers.GitlabManager().project
-        if not self._item:
-            self._item = project.labels.get(self.name)
-        if not self._item:
-            self.save()
-        return self._item
+        self.color = None
+        try:
+            self._item = managers.GitlabManager().project.labels.get(name)
+            self.color = self._item.color
+        except GitlabGetError:
+            pass
 
     def save(self):
         if not self._item:
-            self._item = managers.GitlabManager().project.labels.create(
-                self._data)
-            self._data = {}
-            self.toSave = False
-            logger.debug('Label {} created'.format(self.name))
+            self._item = managers.GitlabManager().project.labels.create({
+                'name': self.name, 'color': self.color})
+            logger.debug("Label `{}' created with `{}' color".format(
+                self.name, self.color))
+        else:
+            self._item.color = self.color
+            self._item.save()
+            logger.debug("Label `{}' updated with `{}' color".format(
+                self.name, self.color))
 
-    def hasColor(self):
-        return 'color' in self._data
 
-
-class Project(Resource):
-    _users = {}
+class Project(object):
+    _item = None
     _repo = None
 
     def __init__(self, repo):
-        Resource.__init__(self)
         self._repo = repo
-
-    def get(self):
-        """
-        Find the project by his name
-
-        Raises:
-            NotFoundException
-
-        Returns:
-            gitlab.v4.objects.Project
-        """
+        search = self._repo.split('/')[1]
+        projects = managers.GitlabManager().gitlab.projects.list(
+            search=search)
+        for project in projects:
+            if project.path_with_namespace == self._repo:
+                self._item = project
+                break
         if not self._item:
-            search = self._repo.split('/')[1]
-            projects = managers.GitlabManager().gitlab.projects.list(
-                search=search)
-            for project in projects:
-                if project.path_with_namespace == self._repo:
-                    self._item = project
-                    return project
             raise NotFoundException("Project {} not found".format(self._repo))
-        return self._item
+
+    def __getattr__(self, name):
+        return getattr(self._item, name)
 
     def addIssue(self, jira_issue):
         """
@@ -255,9 +242,9 @@ class Project(Resource):
         return issue
 
     def flush(self):
-        issues = self.get().issues.list(all=True)
-        labels = self.get().labels.list(all=True)
-        milestones = self.get().milestones.list(all=True)
+        issues = self._item.issues.list(all=True)
+        labels = self._item.labels.list(all=True)
+        milestones = self._item.milestones.list(all=True)
         if len(issues) + len(milestones) + len(labels) == 0:
             logger.info('Nothing to do')
             return self
@@ -289,7 +276,7 @@ class Project(Resource):
                     i += 1
                 except Exception as e:
                     logger.warn('Label "%s" has not been deleted: %s',
-                                m.title, e)
+                                l.name, e)
 
             if i == total:
                 logger.info('All %d labels deleted', total)
@@ -319,68 +306,54 @@ class Project(Resource):
         return self
 
 
-class ProjectMilestone(Resource):
+class ProjectMilestone(object):
+    _item = None
+
     def __init__(self, title):
-        Resource.__init__(self)
         self.title = title
-        self.setData('title', title)
-
-    def get(self):
-        """
-        Fetch Gitlab's object
-
-        We get informations from Gitlab only if necessary, the milestone isn't
-        created until we call the `save()` method or the `id` property.
-        It's created once, if a milestone with the same title exists, it will
-        be used.
-        """
+        project = managers.GitlabManager().project
+        for m in project.milestones.list(search=title):
+            if m.title == title:
+                self._item = m
+                break
         if not self._item:
-            milestones = managers.GitlabManager().project.milestones.list(
-                search=self.title)
-            for m in milestones:
-                if m.title == self.title:
-                    self._item = m
-                    break
-            if not self._item:
-                self.save()
-        return self._item
+            self._item = project.milestones.create({'title': title})
+            logger.debug("Milestone `%s' created", title)
 
-    def save(self):
-        if not self._item:
-            self._item = managers.GitlabManager().project.milestones.create(
-                self._data)
-            self._data = {}
-            self.toSave = False
-            logger.debug('Milestone {} created : #{}'.format(
-                self.title, self._item.id))
-        else:
-            Resource.save(self)
+    def __getattr__(self, name):
+        return getattr(self._item, name)
+
+    def _fill(self, state, due_date=None):
+        toSave = False
+        if state == 'closed' and self._item.state == 'active':
+            self._item.state_event = 'close'
+            toSave = True
+        if due_date:
+            due_date = parse(due_date).strftime('%Y-%m-%d')
+            if due_date != self._item.due_date:
+                self._item.due_date = due_date
+                toSave = True
+        if toSave:
+            self._item.save()
+            logger.debug("Milestone `{}' updated".format(self.title))
 
     def fillFromJiraSprint(self, sprint):
-        m = self.get()
-        if sprint.endDate and sprint.endDate != m.due_date:
-            m.due_date = sprint.endDate
-            self.toSave = True
-        if sprint.state == 'CLOSED' and m.state == 'active':
-            m.state_event = 'close'
-            self.toSave = True
-        self.save()
+        state = 'closed' if sprint.state == 'CLOSED' else 'active'
+        self._fill(state, sprint.endDate)
 
     def fillFromJiraVersion(self, version):
-        m = self.get()
-        if version.releaseDate and version.releaseDate != m.due_date:
-            m.due_date = version.releaseDate
-            self.toSave = True
-        if version.released and m.state == 'active':
-            m.state_event = 'close'
-            self.toSave = True
-        self.save()
+        state = 'closed' if version.released else 'active'
+        self._fill(state, version.releaseDate)
 
 
-class User(Resource):
+class User(object):
+    _item = None
+
     def __init__(self, username):
-        Resource.__init__(self)
-        self._username = username
+        self.username = username
+
+    def __getattr__(self, name):
+        return getattr(self._item, name)
 
     def get(self):
         """
@@ -394,14 +367,14 @@ class User(Resource):
         """
         if not self._item:
             users = managers.GitlabManager().gitlab.users.list(
-                username=self._username)
+                username=self.username)
             if len(users) == 1:
                 self._item = users[0]
             else:
                 err = '{} users found matching {}'.format(
                     len(users),
-                    self._username)
+                    self.username)
                 logging.getLogger('atlassian2gitlab').debug(
-                    "No such user `%s'" % self._username)
+                    "No such user `%s'" % self.username)
                 raise NotFoundException(err)
         return self._item

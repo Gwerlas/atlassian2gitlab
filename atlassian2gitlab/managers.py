@@ -53,7 +53,7 @@ class GitlabManager(object):
         Returns:
             atlassian2gitlab.gl_resources.User
         """
-        if name not in self._users:
+        if name not in self._users.keys():
             from atlassian2gitlab.exceptions import NotFoundException
             try:
                 username = a2g.user_map.get(name, name)
@@ -69,13 +69,6 @@ class GitlabManager(object):
                 self._users[name] = resources.User(username)
         return self._users[name]
 
-    def hasLabel(self, name):
-        """
-        Returns:
-            bool
-        """
-        return name in self._labels
-
     def findLabel(self, name):
         """
         Return the expected project label
@@ -83,7 +76,7 @@ class GitlabManager(object):
         Returns:
             atlassian2gitlab.gl_resources.Label
         """
-        if name not in self._labels:
+        if name not in self._labels.keys():
             self._labels[name] = resources.Label(name)
         return self._labels[name]
 
@@ -94,7 +87,7 @@ class GitlabManager(object):
         Returns:
             atlassian2gitlab.gl_resources.ProjectMilestone
         """
-        if title not in self._milestones:
+        if title not in self._milestones.keys():
             self._milestones[title] = resources.ProjectMilestone(title)
         return self._milestones[title]
 
@@ -112,7 +105,7 @@ class GitlabManager(object):
                 * ``markdown`` - Markdown for the uploaded file
         """
         id = str(attachment.id)
-        if id not in self._attachments:
+        if id not in self._attachments.keys():
             a = self.project.upload(
                 filename='_'.join([attachment.id, attachment.filename]),
                 filedata=attachment.get())
@@ -143,18 +136,14 @@ class JiraManager(object):
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
-            'summary', 'reporter', 'comment', 'issuetype']
+            'summary', 'reporter', 'comment', 'issuetype', 'status',
+            'resolution', 'resolutiondate']
         fields.append(self.getFieldId('Sprint'))
         fields.append(self.getFieldId('Story Points'))
         return self.jira.search_issues(jql, fields=', '.join(fields))
 
-    def activeIssues(self):
-        jql = 'project={}'.format(a2g.jira_key)
-        jql += ' AND (resolution=Unresolved OR Sprint in openSprints())'
-        return self.findIssues(jql)
-
     def cp(self):
-        issues = self.activeIssues()
+        issues = self.findIssues(a2g.jira_jql)
         total = len(issues)
 
         if total == 0:
@@ -164,7 +153,12 @@ class JiraManager(object):
             logger.info('%d issues to migrate', total)
 
         i = 0
+        skipped = 0
         for issue in issues:
+            if issue.fields.issuetype.name == a2g.jira_epic_type:
+                logger.warning("Skip issue %s: It's an Epic", issue.key)
+                skipped += 1
+                continue
             from atlassian2gitlab.exceptions import A2GException
             try:
                 gl_mgr = GitlabManager()
@@ -173,11 +167,13 @@ class JiraManager(object):
             except A2GException as e:
                 logger.warning('Skip issue %s: %s', issue.key, e)
 
-        if i == total:
+        if i == (total + skipped):
             logger.info('All done')
         elif i == 0:
             logger.error('Any issues migrated')
         else:
-            logger.warn('%d/%d issues migrated', i, len(issues))
+            logger.warn(
+                '%d/%d issues migrated (%d skipped)',
+                i, total, skipped)
 
         return self

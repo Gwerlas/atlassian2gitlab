@@ -1,7 +1,8 @@
 import pytest
 from munch import munchify
 import atlassian2gitlab as a2g
-from atlassian2gitlab.gl_resources import Issue
+from atlassian2gitlab.gl_resources import Issue, Label
+from gitlab.exceptions import GitlabGetError
 
 
 def fakeGitlabManager(mocker):
@@ -9,6 +10,8 @@ def fakeGitlabManager(mocker):
     mgr = mock.return_value
     mgr.project = mocker.MagicMock()
     mgr.project.issues = mocker.MagicMock()
+    mgr.project.labels = mocker.MagicMock()
+    mgr.findUser.return_value = fakeUser()
     return mgr
 
 
@@ -16,13 +19,8 @@ def fakeJiraManager(mocker):
     mock = mocker.patch('atlassian2gitlab.managers.JiraManager')
     mgr = mock.return_value
     mgr.jira = mocker.MagicMock()
-    mgr.getFieldId.return_value = 'customfield_10001'
+    mgr.getFieldId.side_effect = ['customfield_10001', 'customfield_10002']
     return mgr
-
-
-class fakeMilestone(object):
-    def __init__(self, id=1):
-        self.id = id
 
 
 class fakeUser(object):
@@ -31,189 +29,145 @@ class fakeUser(object):
         self.username = name
 
 
-def test_get_issue_raise_exception():
-    with pytest.raises(NotImplementedError):
-        Issue().get()
-
-
-def test_create(mocker):
-    mgr = fakeGitlabManager(mocker)
-
-    issue = Issue()
-    issue.owner = mocker.MagicMock()
-    issue.owner.username = 'jdoe'
-
-    issue.setData('foo', 'bar')
-    issue.save()
-
-    mgr.project.issues.create.assert_called_once_with(
-        {'foo': 'bar'},
-        sudo='jdoe')
-    assert issue._data == {}
-    assert issue.toSave is False
-
-
-def test_get_no_sprint(mocker):
-    mgr = fakeJiraManager(mocker)
-
-    jira_fields = munchify({})
-    issue = Issue()
-
-    assert issue.getSprint(jira_fields) is None
-
-
-def test_get_sprint(mocker):
-    mgr = fakeJiraManager(mocker)
-    mgr.jira.sprint.return_value = 'Sprint 1'
-
-    jira_fields = munchify({'customfield_10001': ['id=20,']})
-    issue = Issue()
-
-    assert issue.getSprint(jira_fields) == 'Sprint 1'
-    mgr.jira.sprint.assert_called_once_with('20')
-
-
-def test_set_milestone_from_sprint(mocker):
-    mgr = fakeGitlabManager(mocker)
-    issue = Issue()
-    milestone = mocker.MagicMock()
-    mgr.findMilestone.return_value = milestone
-
-    issue.setMilestoneFromSprint('1.0')
-
-    milestone.fillFromJiraSprint.assert_called_once_with('1.0')
-    mgr.findMilestone.assert_called_once_with('1.0')
-
-
-def test_set_milestone_from_version(mocker):
-    mgr = fakeGitlabManager(mocker)
-    issue = Issue()
-    milestone = mocker.MagicMock()
-    mgr.findMilestone.return_value = milestone
-
-    issue.setMilestoneFromVersion('1.0')
-
-    milestone.fillFromJiraVersion.assert_called_once_with('1.0')
-    mgr.findMilestone.assert_called_once_with('1.0')
-
-
-def test_set_weight(mocker):
-    issue = Issue()
-
-    mocker.patch.object(issue, 'getWeight')
-    mocker.patch.object(issue, 'setData')
-
-    issue.getWeight.return_value = 2
-
-    issue.setWeight(2)
-
-    issue.getWeight.assert_called_once_with(2)
-    issue.setData.assert_called_once_with('weight', 2)
-
-
-def test_set_owner(mocker):
-    mgr = fakeGitlabManager(mocker)
-    issue = Issue()
-    mgr.findUser.return_value = 'John Doe'
-
-    issue.setOwner('jdoe')
-
-    mgr.findUser.assert_called_once_with('jdoe')
-    assert issue.owner == 'John Doe'
-
-
 class fakeJiraIssue(object):
     key = 'PRO-1'
-    fields = munchify({
-        'created': 'now',
-        'summary': 'Title',
-        'reporter': {'name': 'jdoe'},
-        'assignee': {'name': 'jdoe'},
-        'description': 'Big content',
-        'fixVersions': [],
-        'customfield_10001': 1,
-        'issuetype': {'name': 'Story', 'iconUrl': 'http://url'}
-    })
+
+    def __init__(self):
+        self.fields = munchify({
+            'created': '2008-04-12 21:00:00',
+            'summary': 'Title',
+            'reporter': {'name': 'jdoe'},
+            'assignee': {'name': 'jdoe'},
+            'description': 'Big content',
+            'fixVersions': [],
+            'customfield_10001': None,
+            'customfield_10002': 5,
+            'issuetype': {'name': 'Story', 'iconUrl': 'http://url'},
+            'status': {
+                'name': 'To Do',
+                'iconUrl': 'httpr://url',
+                'raw': {
+                    'statusCategory': {'key': 'new', 'colorName': 'blue'}}},
+            'resolution': None
+        })
 
     def permalink(self):
         return 'http://url/'
 
 
-def test_create_from_jira_issue_with_sprint(mocker):
+def test_todo_issue_in_sprint(mocker):
     a2g.link_to_jira_source = False
-    mgr = fakeJiraManager(mocker)
-    user = fakeUser()
-    issue = Issue()
+
+    jira_manager = fakeJiraManager(mocker)
+    jira_manager.jira.sprint.return_value = 'Sprint 1'
 
     jira_issue = fakeJiraIssue()
+    jira_issue.fields.customfield_10001 = ['id=20,']
 
-    mocker.patch.object(issue, 'getSprint')
-    mocker.patch.object(issue, 'setWeight')
-    mocker.patch.object(issue, 'setMilestoneFromSprint')
-    mocker.patch.object(issue, 'save')
+    gl_manager = fakeGitlabManager(mocker)
+    gl_manager.project.labels.get.side_effect = GitlabGetError
+    gl_label = Label('Story')
+    gl_label.color = None
+    gl_manager.findLabel.return_value = gl_label
+    gl_milestone = mocker.MagicMock()
+    gl_milestone.id = 1
+    gl_manager.findMilestone.return_value = gl_milestone
 
-    fakeGitlabManager(mocker).findUser.return_value = user
-    issue.getSprint.return_value = 'Sprint 1'
+    issue = Issue()
+    mocker.patch.object(issue, 'getDominantColorFromUrl')
+    issue.getDominantColorFromUrl.return_value = '#cccccc'
 
     issue.fillFromJira(jira_issue)
 
-    mgr.getFieldId.assert_called_once_with('Story Points')
-    issue.setWeight.assert_called_once_with(1)
-    issue.setMilestoneFromSprint.assert_called_once_with('Sprint 1')
-    assert issue.save.call_count == 1
+    gl_manager.project.issues.create.assert_called_once_with({
+        'created_at': '2008-04-12T21:00:00',
+        'title': 'Title',
+        'assignee_ids': [1],
+        'description': 'Big content',
+        'milestone_id': 1,
+        'weight': 4,
+        'labels': ['Story']}, sudo='jdoe')
+    gl_manager.project.labels.create.assert_called_once_with({
+        'name': 'Story',
+        'color': '#cccccc'})
 
 
-def test_create_from_jira_issue_with_version(mocker):
+def test_in_progress_issue_with_version(mocker):
     a2g.link_to_jira_source = False
-    mgr = fakeJiraManager(mocker)
-    user = fakeUser()
-    issue = Issue()
+
+    fakeJiraManager(mocker)
 
     jira_issue = fakeJiraIssue()
     jira_issue.fields.fixVersions.append('1.0')
+    jira_issue.fields.status.name = 'In Progress'
+    jira_issue.fields.status.raw.statusCategory.key = 'intermediate'
+    jira_issue.fields.status.raw.statusCategory.color = 'yellow'
 
-    mocker.patch.object(issue, 'getSprint')
-    mocker.patch.object(issue, 'setWeight')
-    mocker.patch.object(issue, 'setMilestoneFromVersion')
-    mocker.patch.object(issue, 'save')
+    gl_manager = fakeGitlabManager(mocker)
+    gl_manager.project.labels.get.side_effect = GitlabGetError
+    story_label = Label('Story')
+    story_label.color = '#cccccc'
+    wip_label = Label('In Progress')
+    wip_label.color = None
+    gl_manager.findLabel.side_effect = [story_label, wip_label]
+    gl_milestone = mocker.MagicMock()
+    gl_milestone.id = 1
+    gl_manager.findMilestone.return_value = gl_milestone
 
-    fakeGitlabManager(mocker).findUser.return_value = user
-    issue.getSprint.return_value = None
+    Issue().fillFromJira(jira_issue)
 
-    issue.fillFromJira(jira_issue)
+    gl_manager.project.issues.create.assert_called_once_with({
+        'created_at': '2008-04-12T21:00:00',
+        'title': 'Title',
+        'assignee_ids': [1],
+        'description': 'Big content',
+        'milestone_id': 1,
+        'weight': 4,
+        'labels': ['Story', 'In Progress']
+    }, sudo='jdoe')
+    gl_manager.project.labels.create.assert_called_once_with({
+        'name': 'In Progress',
+        'color': '#0000ff'})
 
-    mgr.getFieldId.assert_called_once_with('Story Points')
-    issue.setWeight.assert_called_once_with(1)
-    issue.setMilestoneFromVersion.assert_called_once_with('1.0')
-    assert issue.save.call_count == 1
 
-
-def test_create_from_jira_issue_with_sprint(mocker):
+def test_resolved_issue_with_comments(mocker):
     a2g.link_to_jira_source = True
-    mgr = fakeJiraManager(mocker)
-    user = fakeUser()
 
-    issue = Issue()
-    issue._item = mocker.MagicMock()
-    issue._item.notes = mocker.MagicMock()
+    fakeJiraManager(mocker)
 
     jira_issue = fakeJiraIssue()
-    jira_issue.fields.comment = munchify({'comments': [
-        {'body': 'Content', 'created': 'now', 'author': {'key': 'jdoe'}}
-    ]})
+    jira_issue.fields.comment = munchify({'comments': [{
+        'body': 'Content',
+        'created': '12/Apr/2008 9 PM',
+        'author': {'key': 'jdoe'}}]})
+    jira_issue.fields.resolution = True
+    jira_issue.fields.resolutiondate = '2012-12-12 12:12'
 
-    mocker.patch.object(issue, 'getSprint')
-    mocker.patch.object(issue, 'setWeight')
-    mocker.patch.object(issue, 'setMilestoneFromSprint')
-    mocker.patch.object(issue, 'save')
+    gl_manager = fakeGitlabManager(mocker)
+    gl_milestone = mocker.MagicMock()
+    gl_milestone.id = 1
+    gl_manager.findMilestone.return_value = gl_milestone
+    gl_issue = mocker.MagicMock()
+    gl_issue.notes = mocker.MagicMock()
+    gl_manager.project.issues.create.return_value = gl_issue
 
-    fakeGitlabManager(mocker).findUser.return_value = user
-    issue.getSprint.return_value = 'Sprint 1'
+    Issue().fillFromJira(jira_issue)
 
-    issue.fillFromJira(jira_issue)
+    gl_manager.project.issues.create.assert_called_once_with({
+        'created_at': '2008-04-12T21:00:00',
+        'title': 'Title',
+        'assignee_ids': [1],
+        'description': 'Big content',
+        'milestone_id': None,
+        'weight': 4,
+        'labels': ['Story']
+    }, sudo='jdoe')
+    gl_issue.notes.create.assert_has_calls([
+        mocker.call(
+            {'body': 'Content', 'created_at': '2008-04-12T21:00:00'},
+            sudo='jdoe'),
+        mocker.call({'body': 'Imported from [PRO-1](http://url/)'})])
 
-    mgr.getFieldId.assert_called_once_with('Story Points')
-    issue.setWeight.assert_called_once_with(1)
-    issue.setMilestoneFromSprint.assert_called_once_with('Sprint 1')
-    assert issue.save.call_count == 1
-    assert issue._item.notes.create.call_count == 2
+    assert gl_issue.state_event == 'close'
+    assert gl_issue.updated_at == '2012-12-12T12:12:00'
+    assert gl_issue.save.call_count == 1
