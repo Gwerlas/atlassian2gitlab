@@ -80,14 +80,20 @@ class Issue(object):
                 label.save()
         if name not in self.labels:
             self.labels.append(name)
+        return label
 
     def addLabelFromIssueType(self, issuetype):
         self.addLabel(issuetype.name, iconUrl=issuetype.iconUrl)
 
     def addLabelFromStatus(self, status):
         if status.raw['statusCategory']['key'] not in ('new', 'done'):
+            name = status.name
             colorname = status.raw['statusCategory']['colorName'].split('-')[0]
-            self.addLabel(status.name, colorname=colorname)
+            label = self.addLabel(name, colorname=colorname)
+            board = managers.GitlabManager().project.boards.list()[0]
+            if not [l.label['name'] for l in board.lists.list()].count(name):
+                board.lists.create({'label_id': label.id})
+                logger.debug("Add label `%s' to the board", name)
 
     def setMilestoneFromSprint(self, sprint):
         milestone = managers.GitlabManager().findMilestone(str(sprint))
@@ -155,11 +161,11 @@ class Issue(object):
 
         spField = jira_manager.getFieldId('Story Points')
         if hasattr(fields, spField) and getattr(fields, spField):
-            logger.debug(spField)
             self.weight = self.getWeight(getattr(fields, spField))
 
         self.addLabelFromIssueType(fields.issuetype)
-        self.addLabelFromStatus(fields.status)
+        if not fields.resolution:
+            self.addLabelFromStatus(fields.status)
         self.save()
 
         if hasattr(fields, 'comment'):
@@ -194,6 +200,10 @@ class Label(object):
             self.color = self._item.color
         except GitlabGetError:
             pass
+
+    @property
+    def id(self):
+        return self._item.id
 
     def save(self):
         if not self._item:

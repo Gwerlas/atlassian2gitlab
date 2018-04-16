@@ -7,7 +7,27 @@ Migrate from the Atlassian suite to Gitlab
 Introduction
 ------------
 
-This project is very young, the *future* first version will only support issue migration from Jira to Gitlab.
+This project is still quite young, the goal is to migrate from Confluence, Jira, Bitbucket and Bamboo to Gitlab.
+
+You need to create the project, users and roles in Gitlab first.
+
+What is currently supported :
+* Issues, with :
+  * Creation date
+  * Title
+  * Assignee
+  * Description (translated from atlassian notation to markdown)
+  * Jira versions or sprints as milestone
+  * Story points as weight
+  * Jira issue types as label
+  * Jira issue status as label
+  * Comments, with:
+    * Creation date
+    * Author
+    * Content (translated from atlassian notation to markdown)
+  * A link to the Jira issue as comment (feature flipped)
+* Issue boards
+* Label (with color)
 
 Based on [`python-gitlab`](https://pypi.python.org/pypi/python-gitlab) and [`jira`](https://pypi.python.org/pypi/jira) Python modules.
 
