@@ -46,6 +46,8 @@ def test_nothing_to_flush(caplog, mocker):
         munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: []},
         'labels': {'list': lambda all: []},
         'milestones': {'list': lambda all: []},
@@ -65,6 +67,8 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
     issue.delete = mocker.stub(name="issue")
     issue.delete.side_effect = Exception('Fail !')
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: [issue]},
         'labels': {'list': lambda all: []},
         'milestones': {'list': lambda all: []},
@@ -72,8 +76,9 @@ def test_flush_issues_in_complete_failure(mocker, caplog):
     project.flush()
     assert issue.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '1 issues to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Issue 1 has not been deleted: Fail !'),
+            "Issue `1' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.ERROR, 'Any issues deleted')
     ]
 
@@ -89,6 +94,8 @@ def test_flush_issues_with_failure(mocker, caplog):
     issue_two = munchify({'id': 2})
     issue_two.delete = mocker.stub(name="issue_two")
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: [issue_one, issue_two]},
         'labels': {'list': lambda all: []},
         'milestones': {'list': lambda all: []},
@@ -97,8 +104,9 @@ def test_flush_issues_with_failure(mocker, caplog):
     assert issue_one.delete.call_count == 1
     assert issue_two.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '2 issues to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Issue 1 has not been deleted: Fail !'),
+            "Issue `1' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.WARNING, '1/2 issues deleted')
     ]
 
@@ -112,6 +120,8 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
     milestone.delete = mocker.stub(name="milestone")
     milestone.delete.side_effect = Exception('Fail !')
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: []},
         'labels': {'list': lambda all: []},
         'milestones': {'list': lambda all: [milestone]}
@@ -119,8 +129,9 @@ def test_flush_milestones_in_complete_failure(mocker, caplog):
     project.flush()
     assert milestone.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '1 milestones to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Milestone "Sprint 1" has not been deleted: Fail !'),
+            "Milestone `Sprint 1' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.ERROR, 'Any milestones deleted')
     ]
 
@@ -136,6 +147,8 @@ def test_flush_milestones_with_failure(mocker, caplog):
     milestone_two = munchify({'title': 'Sprint 2'})
     milestone_two.delete = mocker.stub(name="milestone_two")
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: []},
         'labels': {'list': lambda all: []},
         'milestones': {'list': lambda all: [milestone_one, milestone_two]}
@@ -144,8 +157,9 @@ def test_flush_milestones_with_failure(mocker, caplog):
     assert milestone_one.delete.call_count == 1
     assert milestone_two.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '2 milestones to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Milestone "Sprint 1" has not been deleted: Fail !'),
+            "Milestone `Sprint 1' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.WARNING, '1/2 milestones deleted')
     ]
 
@@ -159,6 +173,8 @@ def test_flush_labels_in_complete_failure(mocker, caplog):
     label.delete = mocker.stub(name="label")
     label.delete.side_effect = Exception('Fail !')
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: []},
         'labels': {'list': lambda all: [label]},
         'milestones': {'list': lambda all: []}
@@ -166,8 +182,9 @@ def test_flush_labels_in_complete_failure(mocker, caplog):
     project.flush()
     assert label.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '1 labels to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Label "Story" has not been deleted: Fail !'),
+            "Label `Story' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.ERROR, 'Any labels deleted')
     ]
 
@@ -183,6 +200,8 @@ def test_flush_labels_with_failure(mocker, caplog):
     label_two = munchify({'name': 'In Progress'})
     label_two.delete = mocker.stub(name="label_two")
     project._item = munchify({
+        'branches': {'list': lambda all: []},
+        'tags': {'list': lambda all: []},
         'issues': {'list': lambda all: []},
         'labels': {'list': lambda all: [label_one, label_two]},
         'milestones': {'list': lambda all: []}
@@ -191,8 +210,9 @@ def test_flush_labels_with_failure(mocker, caplog):
     assert label_one.delete.call_count == 1
     assert label_two.delete.call_count == 1
     assert caplog.record_tuples == [
+        ('atlassian2gitlab', logging.INFO, '2 labels to be deleted'),
         ('atlassian2gitlab', logging.WARNING,
-            'Label "Story" has not been deleted: Fail !'),
+            "Label `Story' has not been deleted: Fail !"),
         ('atlassian2gitlab', logging.WARNING, '1/2 labels deleted')
     ]
 
@@ -202,6 +222,12 @@ def test_flush(mocker, caplog):
     manager.gitlab.projects.list.return_value = [
         munchify({'path_with_namespace': 'fake/project'})]
     project = Project('fake/project')
+    branch_dev = munchify({'name': 'develop'})
+    branch_dev.delete = mocker.stub(name="branch_dev")
+    branch_master = munchify({'name': 'master'})
+    branch_master.delete = mocker.stub(name="branch_master")
+    tag = munchify({'name': 'v1.0'})
+    tag.delete = mocker.stub(name="tag")
     issue = munchify({'id': 1})
     issue.delete = mocker.stub(name="issue")
     label = munchify({'name': 'Story'})
@@ -209,6 +235,9 @@ def test_flush(mocker, caplog):
     milestone = munchify({'title': 'Sprint 1'})
     milestone.delete = mocker.stub(name="milestone")
     project._item = munchify({
+        'default_branch': 'master',
+        'branches': {'list': lambda all: [branch_dev, branch_master]},
+        'tags': {'list': lambda all: [tag]},
         'issues': {'list': lambda all: [issue]},
         'labels': {'list': lambda all: [label]},
         'milestones': {'list': lambda all: [milestone]}
@@ -217,8 +246,20 @@ def test_flush(mocker, caplog):
     assert issue.delete.call_count == 1
     assert label.delete.call_count == 1
     assert milestone.delete.call_count == 1
+    assert branch_dev.delete.call_count == 1
+    assert branch_master.delete.call_count == 0
+    assert tag.delete.call_count == 1
     assert caplog.record_tuples == [
-        ('atlassian2gitlab', logging.INFO, 'All 1 issues deleted'),
-        ('atlassian2gitlab', logging.INFO, 'All 1 labels deleted'),
-        ('atlassian2gitlab', logging.INFO, 'All 1 milestones deleted')
+        ('atlassian2gitlab', logging.INFO, '1 issues to be deleted'),
+        ('atlassian2gitlab', logging.INFO, 'Done'),
+        ('atlassian2gitlab', logging.INFO, '1 labels to be deleted'),
+        ('atlassian2gitlab', logging.INFO, 'Done'),
+        ('atlassian2gitlab', logging.INFO, '1 milestones to be deleted'),
+        ('atlassian2gitlab', logging.INFO, 'Done'),
+        ('atlassian2gitlab', logging.INFO, '1 tags to be deleted'),
+        ('atlassian2gitlab', logging.INFO, 'Done'),
+        ('atlassian2gitlab', logging.INFO, '2 branches to be deleted'),
+        ('atlassian2gitlab', logging.WARNING,
+            "Skip the default branch `master'"),
+        ('atlassian2gitlab', logging.INFO, 'Done'),
     ]

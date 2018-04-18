@@ -1,6 +1,6 @@
 import atlassian2gitlab as a2g
 import requests
-from singleton_decorator import singleton
+from munch import munchify
 
 
 session = requests.Session()
@@ -19,6 +19,22 @@ class Gitlab(object):
                 api_version=4,
                 session=session)
         return getattr(self.__gitlab, name)
+
+
+class BitBucket(object):
+    def __init__(self):
+        if a2g.bitbucket_url == 'https://bitbucket.org':
+            self.api_url = 'https://api.bitbucket.org/1.0'
+        else:
+            self.api_url = '{}/rest/api/1.0'.format(a2g.bitbucket_url)
+
+    def get(self, url):
+        r = requests.get(
+            self.api_url + url,
+            auth=(a2g.bitbucket_username, a2g.bitbucket_password),
+            headers={'Content-Type': 'application/json'})
+        r.raise_for_status()
+        return munchify(r.json())
 
 
 class Jira(object):

@@ -9,7 +9,7 @@ logger = logging.getLogger('atlassian2gitlab')
 
 @singleton
 class GitlabManager(object):
-    _gitlab = None
+    _client = None
     _project = None
     _attachments = {}
     _labels = {}
@@ -24,10 +24,10 @@ class GitlabManager(object):
         Returns:
             atlassian2gitlab.clients.Gitlab
         """
-        if not self._gitlab:
+        if not self._client:
             from atlassian2gitlab.clients import Gitlab
-            self._gitlab = Gitlab()
-        return self._gitlab
+            self._client = Gitlab()
+        return self._client
 
     @property
     def project(self):
@@ -114,19 +114,62 @@ class GitlabManager(object):
 
 
 @singleton
+class BitBucket(object):
+    """
+    Manage source code
+    """
+    _client = None
+
+    @property
+    def bitbucket(self):
+        if not self._client:
+            from atlassian2gitlab.clients import BitBucket
+            self._client = BitBucket()
+        return self._client
+
+    @property
+    def repo(self):
+        project, repo = a2g.bitbucket_repo.split('/')
+        url = '/projects/{}/repos/{}'.format(project, repo)
+        return self.bitbucket.get(url)
+
+    def cp(self):
+        import os
+        import shutil
+        import tempfile
+        tmpdir = tempfile.mkdtemp()
+        source = [l.href for l in self.repo.links.clone if l.name == 'ssh'][0]
+        target = GitlabManager().project.ssh_url_to_repo
+
+        cmdz = [
+            ['git', 'clone', '--mirror', source, tmpdir],
+            ['git', '-C', tmpdir, 'remote', 'set-url', 'origin', target],
+            ['git', '-C', tmpdir, 'push', '--mirror']
+        ]
+        for cmd in cmdz:
+            logger.debug("Run shell command: %s", " ".join(cmd))
+            try:
+                os.system(" ".join(cmd))
+            except Exception as e:
+                logger.error('Failed: %s', str(e))
+        logger.debug("Removing `%s'", tmpdir)
+        shutil.rmtree(tmpdir)
+
+
+@singleton
 class JiraManager(object):
     """
     Manage issues
     """
     _fields = None
-    _jira = None
+    _client = None
 
     @property
     def jira(self):
-        if not self._jira:
+        if not self._client:
             from atlassian2gitlab.clients import Jira
-            self._jira = Jira()
-        return self._jira
+            self._client = Jira()
+        return self._client
 
     def getFieldId(self, name):
         if not self._fields:

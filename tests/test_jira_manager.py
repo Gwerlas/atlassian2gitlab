@@ -14,12 +14,12 @@ def test_instanciate_jira_client(mocker):
 
 def test_no_jira_issues_to_copy(caplog, mocker):
     manager = JiraManager()
-    manager._jira = mocker.MagicMock()
-    manager._jira.fields.return_value = [
+    manager._client = mocker.MagicMock()
+    manager._client.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
         {'name': 'Story Points', 'id': 'field2'},
     ]
-    manager._jira.search_issues.return_value = []
+    manager._client.search_issues.return_value = []
     manager.cp()
     assert caplog.record_tuples == [
         ('atlassian2gitlab', logging.INFO, 'Nothing to do')
@@ -31,12 +31,12 @@ def test_copy_jira_issues_in_failure(caplog, mocker):
     issue = munchify({
         'key': 'PRO-42',
         'fields': {'issuetype': {'name': 'Story'}}})
-    manager._jira = mocker.MagicMock()
-    manager._jira.fields.return_value = [
+    manager._client = mocker.MagicMock()
+    manager._client.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
         {'name': 'Story Points', 'id': 'field2'},
     ]
-    manager._jira.search_issues.return_value = [issue]
+    manager._client.search_issues.return_value = [issue]
     project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     project.addIssue.side_effect = A2GException('Fail !')
     GitlabManager()._project = project
@@ -62,12 +62,12 @@ def test_copy_jira_issues_partially_in_failure(caplog, mocker):
     issue_three = munchify({
         'key': 'PRO-44',
         'fields': {'issuetype': {'name': 'Documentation related'}}})
-    manager._jira = mocker.MagicMock()
-    manager._jira.fields.return_value = [
+    manager._client = mocker.MagicMock()
+    manager._client.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
         {'name': 'Story Points', 'id': 'field2'},
     ]
-    manager._jira.search_issues.return_value = [
+    manager._client.search_issues.return_value = [
         issue_one, issue_two, issue_three]
     project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     project.addIssue.side_effect = [A2GException('Fail !'), None]
@@ -91,12 +91,12 @@ def test_copy_jira_issues(caplog, mocker):
     issue = munchify({
         'key': 'PRO-42',
         'fields': {'issuetype': {'name': 'Story'}}})
-    manager._jira = mocker.MagicMock()
-    manager._jira.fields.return_value = [
+    manager._client = mocker.MagicMock()
+    manager._client.fields.return_value = [
         {'name': 'Sprint', 'id': 'field1'},
         {'name': 'Story Points', 'id': 'field2'},
     ]
-    manager._jira.search_issues.return_value = [issue]
+    manager._client.search_issues.return_value = [issue]
     project = mocker.patch('atlassian2gitlab.gl_resources.Project')
     GitlabManager()._project = project
 

@@ -72,15 +72,23 @@ class Config(object):
         a2g.gitlab_url = gl_config.get('url', fallback='https://gitlab.com/')
         a2g.gitlab_repo = gl_config.get('repo')
 
-        ji_config = config['jira']
-        a2g.jira_url = ji_config.get('url')
-        a2g.jira_jql = ji_config.get('jql')
-        a2g.jira_epic_type = ji_config.get(
-            'epic_type', fallback='Documentation related')
-        a2g.jira_username = ji_config.get('username')
-        a2g.jira_password = ji_config.get('password')
-        a2g.link_to_jira_source = ji_config.getboolean(
-            'link_to_source', fallback=True)
+        if 'bitbucket' in config.keys():
+            bb_config = config['bitbucket']
+            a2g.bitbucket_url = bb_config.get('url')
+            a2g.bitbucket_repo = bb_config.get('repo')
+            a2g.bitbucket_username = bb_config.get('username')
+            a2g.bitbucket_password = bb_config.get('password')
+
+        if 'jira' in config.keys():
+            ji_config = config['jira']
+            a2g.jira_url = ji_config.get('url')
+            a2g.jira_jql = ji_config.get('jql')
+            a2g.jira_epic_type = ji_config.get(
+                'epic_type', fallback='Documentation related')
+            a2g.jira_username = ji_config.get('username')
+            a2g.jira_password = ji_config.get('password')
+            a2g.link_to_jira_source = ji_config.getboolean(
+                'link_to_source', fallback=True)
 
     def mapStoryPoints(self, dict):
         """

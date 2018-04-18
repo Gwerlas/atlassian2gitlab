@@ -9,9 +9,27 @@ Introduction
 
 This project is still quite young, the goal is to migrate from Confluence, Jira, Bitbucket and Bamboo to Gitlab.
 
+State of developments :
+
+- [ ] Confluence
+- [X] Jira
+- [X] Bitbucket
+- [ ] Bamboo
+
+### Requirements
+
 You need to create the project, users and roles in Gitlab first.
 
+If You migrate the Git repository, You need to have Git installed and resolvable from the environment `PATH`.  
+Your SSH public key has to be present in your Bitbucket account.
+
+### Features
+
 What is currently supported :
+
+* Git repository, with :
+  * Branches
+  * Tags
 * Issues, with :
   * Creation date
   * Title

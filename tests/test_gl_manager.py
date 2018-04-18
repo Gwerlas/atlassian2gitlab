@@ -12,7 +12,7 @@ def fakeProject(mocker):
 def test_use_current_user_if_user_not_found(mocker):
     manager = GitlabManager()
     gl = mocker.MagicMock()
-    manager._gitlab = gl
+    manager._client = gl
 
     gl.users = mocker.MagicMock()
     gl.users.list.return_value = ['not', 'found']
@@ -27,7 +27,7 @@ def test_use_current_user_if_user_not_found(mocker):
 def test_find_user(mocker):
     manager = GitlabManager()
     gl = mocker.MagicMock()
-    manager._gitlab = gl
+    manager._client = gl
 
     gl.users = mocker.MagicMock()
     gl.users.list.return_value = ['me']
@@ -50,7 +50,7 @@ def test_find_milestone():
     assert manager.findMilestone('2.0').title == '2.0'
 
 
-def test_gitlab_upload(mocker):
+def test_client_upload(mocker):
     project = munchify({
         'upload': lambda filename, filedata: 'Gitlab attachment'
     })

@@ -252,26 +252,32 @@ class Project(object):
         return issue
 
     def flush(self):
+        tags = self._item.tags.list(all=True)
+        branches = self._item.branches.list(all=True)
         issues = self._item.issues.list(all=True)
         labels = self._item.labels.list(all=True)
         milestones = self._item.milestones.list(all=True)
-        if len(issues) + len(milestones) + len(labels) == 0:
+
+        git_items = len(tags) + len(branches)
+        iss_items = len(issues) + len(milestones) + len(labels)
+        if git_items + iss_items == 0:
             logger.info('Nothing to do')
             return self
 
         if len(issues):
             total = len(issues)
+            logger.info('%d issues to be deleted', total)
             i = 0
             for issue in issues:
                 try:
                     issue.delete()
                     i += 1
                 except Exception as e:
-                    id = issue.id
-                    logger.warn('Issue %s has not been deleted: %s', id, e)
+                    logger.warn("Issue `%s' has not been deleted: %s",
+                                issue.id, e)
 
             if i == total:
-                logger.info('All %d issues deleted', total)
+                logger.info('Done')
             elif i == 0:
                 logger.error('Any issues deleted')
             else:
@@ -279,17 +285,18 @@ class Project(object):
 
         if len(labels):
             total = len(labels)
+            logger.info('%d labels to be deleted', total)
             i = 0
             for l in labels:
                 try:
                     l.delete()
                     i += 1
                 except Exception as e:
-                    logger.warn('Label "%s" has not been deleted: %s',
+                    logger.warn("Label `%s' has not been deleted: %s",
                                 l.name, e)
 
             if i == total:
-                logger.info('All %d labels deleted', total)
+                logger.info('Done')
             elif i == 0:
                 logger.error('Any labels deleted')
             else:
@@ -297,23 +304,64 @@ class Project(object):
 
         if len(milestones):
             total = len(milestones)
+            logger.info('%d milestones to be deleted', total)
             i = 0
             for m in milestones:
                 try:
                     m.delete()
                     i += 1
                 except Exception as e:
-                    logger.warn('Milestone "%s" has not been deleted: %s',
+                    logger.warn("Milestone `%s' has not been deleted: %s",
                                 m.title, e)
 
             if i == total:
-                logger.info('All %d milestones deleted', total)
+                logger.info('Done')
             elif i == 0:
                 logger.error('Any milestones deleted')
             else:
                 logger.warn('%d/%d milestones deleted', i, total)
 
-        return self
+        if len(tags):
+            total = len(tags)
+            logger.info('%d tags to be deleted', total)
+            i = 0
+            for t in tags:
+                try:
+                    t.delete()
+                    i += 1
+                except Exception as e:
+                    logger.warn("Tag `%s' has not been deleted: %s",
+                                t.name, e)
+
+            if i == total:
+                logger.info('Done')
+            elif i == 0:
+                logger.error('Any tags deleted')
+            else:
+                logger.warn('%d/%d tags deleted', i, total)
+
+        if len(branches):
+            total = len(branches)
+            logger.info('%d branches to be deleted', total)
+            i = 0
+            for b in branches:
+                if b.name == self._item.default_branch:
+                    logger.warn("Skip the default branch `%s'", b.name)
+                    i += 1
+                    continue
+                try:
+                    b.delete()
+                    i += 1
+                except Exception as e:
+                    logger.warn("Branch `%s' has not been deleted: %s",
+                                b.name, e)
+
+            if i == total:
+                logger.info('Done')
+            elif i == 0:
+                logger.error('Any branches deleted')
+            else:
+                logger.warn('%d/%d branches deleted', i, total)
 
 
 class ProjectMilestone(object):

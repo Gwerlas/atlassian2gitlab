@@ -1,7 +1,16 @@
 #!/usr/bin/env python
-from atlassian2gitlab import managers, cli
+import atlassian2gitlab as a2g
+from atlassian2gitlab import cli, managers
 
 
 if __name__ == "__main__":
     cli.configure('Migrate from the Atlassian suite to Gitlab')
-    managers.JiraManager().cp()
+
+    if not (a2g.jira_jql or a2g.bitbucket_repo):
+        print('Error: Nothing to do, verify your config file !')
+
+    if a2g.bitbucket_repo:
+        managers.BitBucket().cp()
+
+    if a2g.jira_jql:
+        managers.JiraManager().cp()
