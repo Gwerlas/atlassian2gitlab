@@ -10,6 +10,7 @@ logger = logging.getLogger('atlassian2gitlab')
 @singleton
 class GitlabManager(object):
     _client = None
+    _group = None
     _project = None
     _attachments = {}
     _labels = {}
@@ -28,6 +29,19 @@ class GitlabManager(object):
             from atlassian2gitlab.clients import Gitlab
             self._client = Gitlab()
         return self._client
+
+    @property
+    def group(self):
+        from atlassian2gitlab.exceptions import NotFoundException
+        if not self._group:
+            name = a2g.gitlab_repo.split('/')[0]
+            for g in self.gitlab.groups.list(search=name):
+                if g.path == name:
+                    self._group = g
+                    break
+            if not self._group:
+                raise NotFoundException("No such group `{}'".format(name))
+        return self._group
 
     @property
     def project(self):
@@ -69,6 +83,23 @@ class GitlabManager(object):
                 self._users[name] = resources.User(username)
         return self._users[name]
 
+    def findBoard(self, name=None):
+        from atlassian2gitlab.exceptions import NotFoundException
+        boards = self.project.boards.list(all=True)
+        if not len(boards):
+            b = self.project.boards.create({
+                'name': name or 'Developments'})
+            logger.debug("Board `%s' created (%d)", b.name, b.id)
+            return b
+        elif name:
+            for b in boards:
+                if b.name == name:
+                    return b
+            else:
+                raise NotFoundException("No such board `{}'".format(name))
+        else:
+            return boards[0]
+
     def findLabel(self, name):
         """
         Return the expected project label
@@ -88,7 +119,10 @@ class GitlabManager(object):
             atlassian2gitlab.gl_resources.ProjectMilestone
         """
         if title not in self._milestones.keys():
-            self._milestones[title] = resources.ProjectMilestone(title)
+            if a2g.gitlab_group_level:
+                self._milestones[title] = resources.GroupMilestone(title)
+            else:
+                self._milestones[title] = resources.ProjectMilestone(title)
         return self._milestones[title]
 
     def attachFile(self, attachment):
@@ -114,7 +148,7 @@ class GitlabManager(object):
 
 
 @singleton
-class BitBucket(object):
+class BitBucketManager(object):
     """
     Manage source code
     """
@@ -129,16 +163,29 @@ class BitBucket(object):
 
     @property
     def repo(self):
+        from atlassian2gitlab.exceptions import NotFoundException
         project, repo = a2g.bitbucket_repo.split('/')
         url = '/projects/{}/repos/{}'.format(project, repo)
-        return self.bitbucket.get(url)
+        try:
+            repo = self.bitbucket.get(url)
+        except Exception as e:
+            logger.debug(str(e))
+            raise NotFoundException("No such BitBucket repo `{}'".format(
+                a2g.bitbucket_repo))
 
     def cp(self):
+        try:
+            links = self.repo.links.clone
+        except Exception as e:
+            logger.error('Failed: %s', str(e))
+            return
+
         import os
         import shutil
         import tempfile
+
+        source = [l.href for l in links if l.name == 'ssh'][0]
         tmpdir = tempfile.mkdtemp()
-        source = [l.href for l in self.repo.links.clone if l.name == 'ssh'][0]
         target = GitlabManager().project.ssh_url_to_repo
 
         cmdz = [

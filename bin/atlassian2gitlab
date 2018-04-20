@@ -10,7 +10,7 @@ if __name__ == "__main__":
         print('Error: Nothing to do, verify your config file !')
 
     if a2g.bitbucket_repo:
-        managers.BitBucket().cp()
+        managers.BitBucketManager().cp()
 
     if a2g.jira_jql:
         managers.JiraManager().cp()

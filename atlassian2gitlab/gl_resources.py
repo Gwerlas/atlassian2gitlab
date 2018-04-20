@@ -90,7 +90,7 @@ class Issue(object):
             name = status.name
             colorname = status.raw['statusCategory']['colorName'].split('-')[0]
             label = self.addLabel(name, colorname=colorname)
-            board = managers.GitlabManager().project.boards.list()[0]
+            board = managers.GitlabManager().findBoard()
             if not [l.label['name'] for l in board.lists.list()].count(name):
                 board.lists.create({'label_id': label.id})
                 logger.debug("Add label `%s' to the board", name)
@@ -176,7 +176,7 @@ class Issue(object):
                 user = gl_manager.findUser(comment.author.key)
                 self._item.notes.create(data, sudo=user.username)
 
-        if a2g.link_to_jira_source:
+        if a2g.jira_link_to_source:
             key = jira_issue.key
             url = jira_issue.permalink()
             self._item.notes.create({
@@ -364,18 +364,17 @@ class Project(object):
                 logger.warn('%d/%d branches deleted', i, total)
 
 
-class ProjectMilestone(object):
+class Milestone(object):
     _item = None
 
-    def __init__(self, title):
+    def __init__(self, title, parent):
         self.title = title
-        project = managers.GitlabManager().project
-        for m in project.milestones.list(search=title):
+        for m in parent.milestones.list(search=title):
             if m.title == title:
                 self._item = m
                 break
         if not self._item:
-            self._item = project.milestones.create({'title': title})
+            self._item = parent.milestones.create({'title': title})
             logger.debug("Milestone `%s' created", title)
 
     def __getattr__(self, name):
@@ -402,6 +401,18 @@ class ProjectMilestone(object):
     def fillFromJiraVersion(self, version):
         state = 'closed' if version.released else 'active'
         self._fill(state, version.releaseDate)
+
+
+class GroupMilestone(Milestone):
+    def __init__(self, title):
+        parent = managers.GitlabManager().group
+        Milestone.__init__(self, title, parent)
+
+
+class ProjectMilestone(Milestone):
+    def __init__(self, title):
+        parent = managers.GitlabManager().project
+        Milestone.__init__(self, title, parent)
 
 
 class User(object):

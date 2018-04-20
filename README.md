@@ -96,14 +96,18 @@ Here is an example of config file :
 ; Disable SSL checks globally (not recommanded)
 ;ssl_verify = False
 
-; Generic Atlassian credentials (not used by GitLab)
+; Generic Atlassian credentials (not used in GitLab)
 username = john.doe@domain.tld
 password = very-secret
 
 [gitlab]
 url = http://your-gitlab-url.tld/
 token = get-this-token-from-your-profile
-repo = namespaced/project/name
+repo = group/project
+
+[bitbucket]
+url = https://bitbucket.org
+repo = project/repo
 
 [jira]
 url = https://pycontribs.atlassian.net

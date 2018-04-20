@@ -56,7 +56,7 @@ class fakeJiraIssue(object):
 
 
 def test_todo_issue_in_sprint(mocker):
-    a2g.link_to_jira_source = False
+    a2g.jira_link_to_source = False
 
     jira_manager = fakeJiraManager(mocker)
     jira_manager.jira.sprint.return_value = 'Sprint 1'
@@ -93,7 +93,7 @@ def test_todo_issue_in_sprint(mocker):
 
 
 def test_in_progress_issue_with_version(mocker):
-    a2g.link_to_jira_source = False
+    a2g.jira_link_to_source = False
 
     fakeJiraManager(mocker)
 
@@ -131,7 +131,7 @@ def test_in_progress_issue_with_version(mocker):
 
 
 def test_resolved_issue_with_comments(mocker):
-    a2g.link_to_jira_source = True
+    a2g.jira_link_to_source = True
 
     fakeJiraManager(mocker)
 

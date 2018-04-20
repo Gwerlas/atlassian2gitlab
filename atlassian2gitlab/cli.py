@@ -17,7 +17,7 @@ class Config(object):
     ...     'url': 'http://my-jira.local',
     ...     'username': 'jdoe',
     ...     'password': 'secret',
-    ...     'link_to_source': 'Off'}
+    ...     'link_to_source': 'No'}
     >>> config['story_points'] = {'5': '4'}
     >>> config['user_map'] = {'jira': 'gitlab'}
     >>> c = Config(config)
@@ -30,6 +30,8 @@ class Config(object):
     'get-it-from-your-profile'
     >>> a2g.gitlab_repo
     'fake/project'
+    >>> a2g.gitlab_group_level
+    False
     >>> a2g.jira_jql
     'Project=PRO'
     >>> a2g.jira_url
@@ -38,7 +40,7 @@ class Config(object):
     'jdoe'
     >>> a2g.jira_password
     'secret'
-    >>> a2g.link_to_jira_source
+    >>> a2g.jira_link_to_source
     False
 
     If a section named `user_map` is present, we use it as a map for
@@ -71,6 +73,8 @@ class Config(object):
         a2g.gitlab_token = gl_config.get('token')
         a2g.gitlab_url = gl_config.get('url', fallback='https://gitlab.com/')
         a2g.gitlab_repo = gl_config.get('repo')
+        a2g.gitlab_group_level = gl_config.getboolean(
+            'group_level', fallback=False)
 
         if 'bitbucket' in config.keys():
             bb_config = config['bitbucket']
@@ -87,7 +91,7 @@ class Config(object):
                 'epic_type', fallback='Documentation related')
             a2g.jira_username = ji_config.get('username')
             a2g.jira_password = ji_config.get('password')
-            a2g.link_to_jira_source = ji_config.getboolean(
+            a2g.jira_link_to_source = ji_config.getboolean(
                 'link_to_source', fallback=True)
 
     def mapStoryPoints(self, dict):

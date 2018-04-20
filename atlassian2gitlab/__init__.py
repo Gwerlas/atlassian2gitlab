@@ -4,6 +4,7 @@ __version__ = "0.5"
 gitlab_url = None
 gitlab_token = None
 gitlab_repo = None
+gitlab_group_level = False
 bitbucket_url = None
 bitbucket_repo = None
 bitbucket_username = None
@@ -13,8 +14,8 @@ jira_jql = None
 jira_epic_type = None
 jira_username = None
 jira_password = None
+jira_link_to_source = True
 
-link_to_jira_source = True
 
 storyPoint_map = {
     5: 4,
