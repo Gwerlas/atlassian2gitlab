@@ -85,9 +85,18 @@ class GitlabManager(object):
 
     def findBoard(self, name=None):
         from atlassian2gitlab.exceptions import NotFoundException
+        if name:
+            try:
+                for b in self.group.boards.list(all=True):
+                    if b.name == name:
+                        return b
+            except Exception as e:
+                logger.debug(str(e))
+
         boards = self.project.boards.list(all=True)
         if not len(boards):
-            b = self.project.boards.create({
+            parent = self.group if a2g.gitlab_group_level else self.project
+            b = parent.boards.create({
                 'name': name or 'Developments'})
             logger.debug("Board `%s' created (%d)", b.name, b.id)
             return b
