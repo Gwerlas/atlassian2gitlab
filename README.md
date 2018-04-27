@@ -62,7 +62,7 @@ Usage
 -----
 
 ```bash
-usage: atlassian2gitlab [-h] -c CONFIG [-d] [-V]
+usage: atlassian2gitlab [-h] -c CONFIG [-f] [-V]
 
 Migrate from the Atlassian suite to Gitlab
 
@@ -70,6 +70,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         Config file path
+  -f, --flush           Flush the Gitlab repo first
   -V, --version         Show version and exit
 ```
 

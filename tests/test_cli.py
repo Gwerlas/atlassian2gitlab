@@ -16,10 +16,12 @@ def test_config(mocker):
     cp = mocker.patch('configparser.ConfigParser').return_value
     mocker.patch('atlassian2gitlab.cli.Config')
 
-    ap.parse_args.return_value = munchify({'config': 'my-config.ini'})
+    ap.parse_args.return_value = munchify({
+        'config': 'my-config.ini',
+        'flush': False})
 
     cli.configure('This is my test !')
 
-    assert ap.add_argument.call_count == 2
+    assert ap.add_argument.call_count == 3
     assert ap.parse_args.call_count == 1
     cp.read.assert_called_once_with('my-config.ini')

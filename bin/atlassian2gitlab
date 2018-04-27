@@ -9,8 +9,14 @@ if __name__ == "__main__":
     if not (a2g.jira_jql or a2g.bitbucket_repo):
         print('Error: Nothing to do, verify your config file !')
 
+    if a2g.gitlab_flush:
+        print("Flush `{}' first".format(a2g.gitlab_repo))
+        managers.GitlabManager().project.flush()
+
     if a2g.bitbucket_repo:
+        print("Migrate the Git repository")
         managers.BitBucketManager().cp()
 
     if a2g.jira_jql:
+        print("Migrate the issues")
         managers.JiraManager().cp()

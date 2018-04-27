@@ -128,11 +128,18 @@ def configure(description):
         help='Config file path',
         required=True)
     parser.add_argument(
+        '-f', '--flush',
+        help='Flush the Gitlab repo first',
+        action='store_true')
+    parser.add_argument(
         '-V', '--version',
         help='Show version and exit',
         action='version',
         version='Atlassian2Gitlab {}'.format(a2g.__version__))
     args = parser.parse_args()
+
+    if args.flush:
+        a2g.gitlab_flush = True
 
     import configparser
     config = configparser.ConfigParser()
