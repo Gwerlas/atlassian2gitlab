@@ -236,7 +236,7 @@ class JiraManager(object):
     def findIssues(self, jql):
         fields = [
             'assignee', 'attachment', 'created', 'description', 'fixVersions',
-            'summary', 'reporter', 'comment', 'issuetype', 'status',
+            'labels', 'summary', 'reporter', 'comment', 'issuetype', 'status',
             'resolution', 'resolutiondate']
         fields.append(self.getFieldId('Sprint'))
         fields.append(self.getFieldId('Story Points'))

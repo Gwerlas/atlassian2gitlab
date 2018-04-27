@@ -26,17 +26,21 @@ class Issue(object):
         Create the Gitlab issue (update not yet supported)
         """
         project = managers.GitlabManager().project
-        self._item = project.issues.create({
-            'created_at': self.created_at,
-            'title': self.title,
-            'assignee_ids': self.assignee_ids,
-            'description': self.description,
-            'milestone_id': self.milestone_id,
-            'weight': self.weight,
-            'labels': self.labels},
-            sudo=self._owner)
-        logger.debug("Issue `{}' created (#{})".format(
-            self.title, self._item.iid))
+        try:
+            self._item = project.issues.create({
+                'created_at': self.created_at,
+                'title': self.title,
+                'assignee_ids': self.assignee_ids,
+                'description': self.description,
+                'milestone_id': self.milestone_id,
+                'weight': self.weight,
+                'labels': self.labels},
+                sudo=self._owner)
+            logger.debug("Issue `{}' created (#{})".format(
+                self.title, self._item.iid))
+        except Exception as e:
+            logger.debug(str(e))
+            logger.error("Couldn't create issue `{}'".format(self.title))
 
     def getSprint(self, fields):
         """
@@ -163,18 +167,25 @@ class Issue(object):
         if hasattr(fields, spField) and getattr(fields, spField):
             self.weight = self.getWeight(getattr(fields, spField))
 
+        if len(fields.labels):
+            for label in fields.labels:
+                self.addLabel(label)
+
         self.addLabelFromIssueType(fields.issuetype)
         if not fields.resolution:
             self.addLabelFromStatus(fields.status)
         self.save()
 
         if hasattr(fields, 'comment'):
-            for comment in fields.comment.comments:
-                data = {
-                    'body': converter.toMarkdown(comment.body),
-                    'created_at': parse(comment.created).isoformat()}
-                user = gl_manager.findUser(comment.author.key)
-                self._item.notes.create(data, sudo=user.username)
+            try:
+                for comment in fields.comment.comments:
+                    data = {
+                        'body': converter.toMarkdown(comment.body),
+                        'created_at': parse(comment.created).isoformat()}
+                    user = gl_manager.findUser(comment.author.key)
+                    self._item.notes.create(data, sudo=user.username)
+            except Exception as e:
+                logger.warn("Unable to add a comment from `%s'", user.username)
 
         if a2g.jira_link_to_source:
             key = jira_issue.key

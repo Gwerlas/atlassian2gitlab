@@ -38,6 +38,7 @@ class fakeJiraIssue(object):
             'summary': 'Title',
             'reporter': {'name': 'jdoe'},
             'assignee': {'name': 'jdoe'},
+            'labels': [],
             'description': 'Big content',
             'fixVersions': [],
             'customfield_10001': None,
