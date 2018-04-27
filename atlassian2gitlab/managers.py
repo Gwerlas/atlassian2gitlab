@@ -181,6 +181,7 @@ class BitBucketManager(object):
             logger.debug(str(e))
             raise NotFoundException("No such BitBucket repo `{}'".format(
                 a2g.bitbucket_repo))
+        return repo
 
     def cp(self):
         try:
