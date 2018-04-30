@@ -235,7 +235,7 @@ class Project(object):
 
     def __init__(self, repo):
         self._repo = repo
-        search = self._repo.split('/')[1]
+        search = self._repo.split('/')[-1]
         projects = managers.GitlabManager().gitlab.projects.list(
             search=search)
         for project in projects:
