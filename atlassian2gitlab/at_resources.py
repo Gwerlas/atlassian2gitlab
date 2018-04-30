@@ -142,7 +142,7 @@ class AtlassianNotationConverter(object):
         """
         tmp = text.strip()
         tmp = re.sub(r'\r\n', r'\n', tmp)
-        tmp = re.sub(r'\{code.*?\}.*?\{code\}',
+        tmp = re.sub(r'\{(code|noformat).*?\}.*?\{\1\}',
                      self._keepItForLater,
                      tmp, flags=re.DOTALL)
         tmp = re.sub(r'\[.+?\]',
@@ -230,9 +230,10 @@ class AtlassianNotationConverter(object):
                 r'^!([^|]*)(?:\|.*)?!$',
                 self._attachmentsToMarkdown,
                 repl)
+            r = r'^\{(code|noformat):?(?P<l>[a-z]*?)?\}\n*(?P<c>.+?)\n*\{\1\}$'
             repl = re.sub(
-                r'^\{code:?(?P<lang>[a-z]*?)?\}\n*(?P<code>.+?)\n*\{code\}$',
-                r'\n```\g<lang>\n\g<code>\n```',
+                r,
+                r'\n```\g<l>\n\g<c>\n```',
                 repl,
                 flags=re.DOTALL
             )

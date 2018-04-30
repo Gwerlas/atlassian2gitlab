@@ -46,6 +46,10 @@ $ my_command.py -v --another-argument
 The return of my command !
 ```
 
+```
+Another preformatted paragraph
+```
+
 HTML :
 
 ```html

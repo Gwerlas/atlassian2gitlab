@@ -33,6 +33,9 @@ Code from [~bach] :
 $ my_command.py -v --another-argument
 The return of my command !
 {code}
+{noformat}
+Another preformatted paragraph
+{noformat}
 
 HTML :
 {code:html}
