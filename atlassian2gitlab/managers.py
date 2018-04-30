@@ -240,7 +240,10 @@ class JiraManager(object):
             'resolution', 'resolutiondate']
         fields.append(self.getFieldId('Sprint'))
         fields.append(self.getFieldId('Story Points'))
-        return self.jira.search_issues(jql, fields=', '.join(fields))
+        return self.jira.search_issues(
+            jql,
+            fields=', '.join(fields),
+            maxResults=10000)
 
     def cp(self):
         issues = self.findIssues(a2g.jira_jql)
@@ -259,12 +262,12 @@ class JiraManager(object):
                 logger.warning("Skip issue %s: It's an Epic", issue.key)
                 skipped += 1
                 continue
-            from atlassian2gitlab.exceptions import A2GException
+
             try:
                 gl_mgr = GitlabManager()
                 gl_mgr.project.addIssue(issue)
                 i += 1
-            except A2GException as e:
+            except Exception as e:
                 logger.warning('Skip issue %s: %s', issue.key, e)
 
         if i == (total + skipped):

@@ -411,7 +411,8 @@ class Milestone(object):
 
     def fillFromJiraVersion(self, version):
         state = 'closed' if version.released else 'active'
-        self._fill(state, version.releaseDate)
+        date = version.releaseDate if hasattr(version, 'releaseDate') else None
+        self._fill(state, date)
 
 
 class GroupMilestone(Milestone):
