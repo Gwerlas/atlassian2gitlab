@@ -204,11 +204,10 @@ class BitBucketManager(object):
             ['git', '-C', tmpdir, 'push', '--mirror']
         ]
         for cmd in cmdz:
-            logger.debug("Run shell command: %s", " ".join(cmd))
-            try:
-                os.system(" ".join(cmd))
-            except Exception as e:
-                logger.error('Failed: %s', str(e))
+            cmd = " ".join(cmd)
+            logger.debug("Run shell command: %s", cmd)
+            if os.system(cmd):
+                raise Exception(r'Command failed :\n> {}'.format(cmd))
         logger.debug("Removing `%s'", tmpdir)
         shutil.rmtree(tmpdir)
 
