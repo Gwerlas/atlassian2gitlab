@@ -4,6 +4,9 @@ Migrate from the Atlassian suite to Gitlab
 [![pipeline status](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/pipeline.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
 [![coverage report](https://gitlab.com/gwerlas/atlassian2gitlab/badges/master/coverage.svg)](https://gitlab.com/gwerlas/atlassian2gitlab/commits/master)
 
+[Official repository](https://gitlab.com/gwerlas/atlassian2gitlab)  
+[Official documentation](https://gitlab.com/gwerlas/atlassian2gitlab/wikis/home)
+
 Introduction
 ------------
 
